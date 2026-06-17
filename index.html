@@ -120,6 +120,29 @@
   .chip-teal { background: var(--teal-light); color: var(--teal); }
   .chip-green { background: #EAF9F2; color: var(--green); }
 
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--white); border-radius: var(--radius-sm);
+    padding: 0 12px; margin-bottom: 14px;
+    box-shadow: var(--shadow);
+    border: 1.5px solid transparent;
+    transition: border-color .15s;
+  }
+  .search-box:focus-within { border-color: var(--teal); }
+  .search-icon { font-size: 15px; opacity: 0.6; flex-shrink: 0; }
+  .search-input {
+    flex: 1; border: none; outline: none; background: transparent;
+    padding: 12px 0; font-size: 15px; font-family: var(--font);
+    color: var(--text);
+  }
+  .search-input::placeholder { color: var(--muted); }
+  .search-clear {
+    background: none; border: none; color: var(--muted);
+    font-size: 14px; cursor: pointer; padding: 4px 6px;
+    display: none; flex-shrink: 0;
+  }
+  .search-clear.visible { display: block; }
+
   .btn-add-patient {
     width: 100%; padding: 15px;
     background: var(--white);
@@ -434,6 +457,11 @@
   <!-- SCREEN: INDEX -->
   <div class="screen active" id="screenIndex">
     <p class="section-label" style="margin-top:8px">Pacientes</p>
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="patientSearch" class="search-input" placeholder="Pesquisar paciente…" autocomplete="off" oninput="renderIndex()">
+      <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Limpar">✕</button>
+    </div>
     <div class="patient-grid" id="patientGrid"></div>
     <button class="btn-add-patient" onclick="openAddPatient()">+ Adicionar paciente</button>
   </div>
@@ -704,11 +732,27 @@ async function loadAllData() {
 // ════════════════════════════════════════════════════════════════════════════
 function renderIndex() {
   const grid = document.getElementById('patientGrid');
+
+  // Mostra/esconde o botão de limpar conforme há texto
+  const searchEl = document.getElementById('patientSearch');
+  const term = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const clearBtn = document.getElementById('searchClear');
+  if (clearBtn) clearBtn.classList.toggle('visible', term.length > 0);
+
   if (!db.patients.length) {
     grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">👤</div>Nenhum paciente ainda.<br>Toque em "+ Adicionar paciente" para começar.</div>`;
     return;
   }
-  grid.innerHTML = db.patients.map(p => {
+
+  // Filtra pelo termo de busca (ignora maiúsculas/acentos)
+  const matches = db.patients.filter(p => normalize(p).includes(normalize(term)));
+
+  if (!matches.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div>Nenhum paciente encontrado para "${escHtml(searchEl.value.trim())}".</div>`;
+    return;
+  }
+
+  grid.innerHTML = matches.map(p => {
     const sessions = db.sessions[p] || [];
     const total = sessions.reduce((s,x) => s + (x.valor||0), 0);
     const lastDate = sessions.length ? sessions[sessions.length-1].date : null;
@@ -928,6 +972,18 @@ function handleTopbarAction() {
   } else {
     openAddPatient();
   }
+}
+
+// ── Busca de pacientes ──────────────────────────────────────────────────────
+function clearSearch() {
+  const el = document.getElementById('patientSearch');
+  el.value = '';
+  el.focus();
+  renderIndex();
+}
+// Remove acentos e deixa minúsculo, pra busca tolerante (ex: "joao" acha "João")
+function normalize(s) {
+  return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
