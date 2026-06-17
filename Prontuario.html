@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Prontuário</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --navy: #1B2B3A;
+    --teal: #2EC4B6;
+    --teal-light: #E8F8F7;
+    --teal-mid: #B2EAE6;
+    --sand: #F7F4EF;
+    --white: #FFFFFF;
+    --text: #1B2B3A;
+    --muted: #7B8C99;
+    --border: #D6DDE3;
+    --red: #E05252;
+    --green: #27AE60;
+    --orange: #F39C12;
+    --remark-bg: #FEF3E2;
+    --remark-border: #F39C12;
+    --normal-bg: #EAF9F5;
+    --normal-border: #2EC4B6;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 2px 12px rgba(27,43,58,0.10);
+    --shadow-lg: 0 8px 32px rgba(27,43,58,0.14);
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: var(--font);
+    background: var(--sand);
+    color: var(--text);
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--navy);
+    color: #fff;
+    padding: 18px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .topbar-logo {
+    width: 36px; height: 36px;
+    background: var(--teal);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .topbar-sub { font-size: 11px; color: #8AABB8; margin-top: 1px; }
+  .topbar-right { margin-left: auto; display: flex; gap: 8px; }
+  .btn-icon {
+    background: rgba(255,255,255,0.12);
+    border: none; border-radius: 8px;
+    color: #fff; font-size: 13px; font-weight: 600;
+    padding: 8px 14px; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-icon:active { background: rgba(255,255,255,0.22); }
+
+  /* ── SCREENS ── */
+  .screen { display: none; padding: 20px 16px 100px; }
+  .screen.active { display: block; }
+
+  /* ── INDEX ── */
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 10px; padding-left: 4px;
+  }
+
+  .patient-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+
+  .patient-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .patient-card:active { border-color: var(--teal); box-shadow: var(--shadow-lg); }
+
+  .patient-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--teal-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: var(--teal);
+    flex-shrink: 0;
+  }
+  .patient-info { flex: 1; min-width: 0; }
+  .patient-name { font-size: 15px; font-weight: 700; }
+  .patient-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .patient-arrow { color: var(--border); font-size: 18px; }
+
+  .stat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .chip {
+    font-size: 11px; font-weight: 600; border-radius: 20px;
+    padding: 3px 10px;
+  }
+  .chip-teal { background: var(--teal-light); color: var(--teal); }
+  .chip-green { background: #EAF9F2; color: var(--green); }
+
+  .btn-add-patient {
+    width: 100%; padding: 15px;
+    background: var(--white);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--muted); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .btn-add-patient:active { border-color: var(--teal); color: var(--teal); }
+
+  /* ── PATIENT VIEW ── */
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none;
+    color: var(--teal); font-size: 14px; font-weight: 600;
+    cursor: pointer; padding: 0 0 16px;
+  }
+
+  .patient-header {
+    background: var(--navy);
+    border-radius: var(--radius);
+    padding: 20px;
+    color: #fff;
+    margin-bottom: 16px;
+    display: flex; gap: 16px; align-items: center;
+  }
+  .patient-header-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--teal);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; color: var(--navy); flex-shrink: 0;
+  }
+  .patient-header-name { font-size: 18px; font-weight: 800; }
+  .patient-header-stats { display: flex; gap: 20px; margin-top: 10px; }
+  .stat-block { text-align: center; }
+  .stat-num { font-size: 20px; font-weight: 800; color: var(--teal); }
+  .stat-lbl { font-size: 10px; color: #8AABB8; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* Month filter */
+  .month-filter {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--white); border-radius: var(--radius-sm);
+    padding: 12px 16px; margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .month-filter label { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .month-filter input {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 14px; font-family: var(--font);
+    background: var(--sand); color: var(--text);
+    outline: none;
+  }
+  .month-filter input:focus { border-color: var(--teal); }
+
+  /* Form card */
+  .form-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .form-card-header {
+    background: var(--teal);
+    padding: 14px 18px;
+    font-size: 14px; font-weight: 700; color: var(--navy);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .form-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .form-row { display: flex; gap: 10px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+  .form-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .form-input, .form-select, .form-textarea {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 13px;
+    font-size: 15px; font-family: var(--font);
+    color: var(--text); background: var(--sand);
+    outline: none; width: 100%;
+    transition: border-color .15s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--teal);
+    background: #fff;
+  }
+  .form-textarea { resize: none; line-height: 1.5; }
+  .form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237B8C99' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+  .btn-save {
+    width: 100%; padding: 15px;
+    background: var(--teal); border: none;
+    border-radius: var(--radius-sm);
+    font-size: 16px; font-weight: 700; color: var(--navy);
+    cursor: pointer; letter-spacing: 0.2px;
+    transition: opacity .15s;
+  }
+  .btn-save:active { opacity: 0.85; }
+
+  /* Session list */
+  .session-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .session-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    border-left: 4px solid transparent;
+  }
+  .session-card.normal { border-left-color: var(--teal); }
+  .session-card.remarcacao { border-left-color: var(--orange); }
+
+  .session-card-top {
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .session-date { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .session-badge {
+    font-size: 10px; font-weight: 700; border-radius: 20px;
+    padding: 3px 9px; letter-spacing: 0.3px;
+  }
+  .badge-normal { background: var(--normal-bg); color: var(--teal); }
+  .badge-remark { background: var(--remark-bg); color: var(--orange); }
+  .session-value { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--green); }
+
+  .session-fields { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .session-field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  .session-field-value { font-size: 13px; color: var(--text); margin-top: 2px; line-height: 1.4; }
+  .session-link { color: var(--teal); font-size: 13px; text-decoration: none; word-break: break-all; }
+  .session-link:hover { text-decoration: underline; }
+  .session-delete {
+    float: right; background: none; border: none;
+    color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(27,43,58,0.55); z-index: 200;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: var(--radius);
+    padding: 24px; width: 100%; max-width: 360px;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-cancel {
+    flex: 1; padding: 13px; background: var(--sand);
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer; color: var(--muted);
+  }
+  .btn-confirm {
+    flex: 1; padding: 13px; background: var(--teal);
+    border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 700; cursor: pointer; color: var(--navy);
+  }
+
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted); font-size: 14px;
+  }
+  .empty-state-icon { font-size: 40px; margin-bottom: 10px; }
+
+  .export-bar {
+    background: var(--white);
+    border-top: 1.5px solid var(--border);
+    padding: 12px 16px;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 99;
+    display: flex; gap: 10px; align-items: center;
+    box-shadow: 0 -2px 12px rgba(27,43,58,0.08);
+  }
+  .btn-export {
+    flex: 1; padding: 13px;
+    background: var(--navy); border: none;
+    border-radius: var(--radius-sm);
+    color: #fff; font-size: 14px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; gap: 8px;
+    transition: opacity .15s;
+  }
+  .btn-export:active { opacity: 0.8; }
+  .btn-export-teal { background: var(--teal); color: var(--navy); }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: var(--navy); color: #fff;
+    padding: 12px 22px; border-radius: 40px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: var(--shadow-lg);
+    opacity: 0; transition: opacity .3s;
+    z-index: 300; pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Month summary bar */
+  .month-summary {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .summary-card {
+    flex: 1; background: var(--white); border-radius: var(--radius-sm);
+    padding: 12px 14px; box-shadow: var(--shadow); text-align: center;
+  }
+  .summary-card-num { font-size: 20px; font-weight: 800; color: var(--teal); }
+  .summary-card-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-top: 2px; }
+
+  /* ── LOGIN SCREEN ── */
+  .login-wrap {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .login-card {
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); padding: 32px 24px;
+    width: 100%; max-width: 360px;
+  }
+  .login-logo {
+    width: 56px; height: 56px; background: var(--teal);
+    border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; font-size: 28px; margin: 0 auto 16px;
+  }
+  .login-title { font-size: 20px; font-weight: 800; text-align: center; }
+  .login-sub { font-size: 13px; color: var(--muted); text-align: center; margin: 4px 0 24px; }
+  .login-card .form-group { margin-bottom: 14px; }
+  .login-error { color: var(--red); font-size: 13px; text-align: center; margin-top: 12px; min-height: 18px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0; background: var(--sand);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500; flex-direction: column; gap: 16px;
+  }
+  .spinner {
+    width: 40px; height: 40px; border: 4px solid var(--border);
+    border-top-color: var(--teal); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-size: 14px; font-weight: 600; }
+  .hidden { display: none !important; }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --sand: #0F1923;
+      --white: #1B2B3A;
+      --text: #E8EFF4;
+      --muted: #6B8090;
+      --border: #2C3E50;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     CONFIGURAÇÃO DO SUPABASE
+     Substitua os dois valores abaixo pelos da SUA conta (ver guia, Etapa 2).
+     ════════════════════════════════════════════════════════════════════════ -->
+<script>
+  const SUPABASE_URL = 'COLE_AQUI_SUA_PROJECT_URL';
+  const SUPABASE_ANON_KEY = 'COLE_AQUI_SUA_ANON_KEY';
+</script>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Carregando…</div>
+</div>
+
+<!-- ════ LOGIN SCREEN ════ -->
+<div class="login-wrap hidden" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🧠</div>
+    <div class="login-title">Prontuário</div>
+    <div class="login-sub">Entre para acessar seus pacientes</div>
+    <div class="form-group">
+      <label class="form-label">E-mail</label>
+      <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-save" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ════ APP (escondido até login) ════ -->
+<div id="appRoot" class="hidden">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">🧠</div>
+    <div>
+      <div class="topbar-title" id="topbarTitle">Prontuário</div>
+      <div class="topbar-sub" id="topbarSub">Selecione um paciente</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-icon" id="topbarAction" onclick="handleTopbarAction()">+ Paciente</button>
+      <button class="btn-icon" onclick="doLogout()" title="Sair">Sair</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: INDEX -->
+  <div class="screen active" id="screenIndex">
+    <p class="section-label" style="margin-top:8px">Pacientes</p>
+    <div class="patient-grid" id="patientGrid"></div>
+    <button class="btn-add-patient" onclick="openAddPatient()">+ Adicionar paciente</button>
+  </div>
+
+  <!-- EXPORT BAR (fixed bottom) -->
+  <div class="export-bar">
+    <button class="btn-export btn-export-teal" onclick="exportExcel()">📥 Exportar backup Excel</button>
+  </div>
+
+  <!-- SCREEN: PATIENT -->
+  <div class="screen" id="screenPatient">
+    <button class="back-btn" onclick="goIndex()">← Voltar</button>
+
+    <div class="patient-header">
+      <div class="patient-header-avatar" id="phAvatar"></div>
+      <div>
+        <div class="patient-header-name" id="phName"></div>
+        <div class="patient-header-stats" id="phStats"></div>
+      </div>
+    </div>
+
+    <!-- Month filter -->
+    <div class="month-filter">
+      <label>Mês:</label>
+      <input type="month" id="monthFilter" onchange="renderPatientView()">
+    </div>
+
+    <!-- Month summary -->
+    <div class="month-summary">
+      <div class="summary-card">
+        <div class="summary-card-num" id="sumSessions">0</div>
+        <div class="summary-card-lbl">Sessões no mês</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-num" id="sumValue">R$ 0</div>
+        <div class="summary-card-lbl">Total no mês</div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="form-card">
+      <div class="form-card-header">✏️ Registrar sessão</div>
+      <div class="form-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Data</label>
+            <input type="date" class="form-input" id="fDate">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select class="form-select" id="fTipo">
+              <option value="Normal">Normal</option>
+              <option value="Remarcação">Remarcação</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Valor (R$)</label>
+          <input type="number" class="form-input" id="fValor" placeholder="0,00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Demanda (resumo)</label>
+          <textarea class="form-textarea" id="fDemanda" rows="2" placeholder="Queixa principal da sessão…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Relato (resumo)</label>
+          <textarea class="form-textarea" id="fRelato" rows="2" placeholder="O que o paciente trouxe…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Conduta</label>
+          <textarea class="form-textarea" id="fConduta" rows="2" placeholder="Intervenções realizadas…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Link do atendimento completo</label>
+          <input type="url" class="form-input" id="fLink" placeholder="https://…">
+        </div>
+        <button class="btn-save" onclick="saveSession()">Salvar sessão</button>
+      </div>
+    </div>
+
+    <!-- Session list -->
+    <p class="section-label">Sessões registradas</p>
+    <div class="session-list" id="sessionList"></div>
+  </div>
+
+  <!-- MODAL: Add Patient -->
+  <div class="modal-overlay" id="modalAdd">
+    <div class="modal">
+      <h3>Novo paciente</h3>
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input type="text" class="form-input" id="newPatientName" placeholder="Nome do paciente" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeAddPatient()">Cancelar</button>
+        <button class="btn-confirm" onclick="confirmAddPatient()">Adicionar</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /appRoot -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  PRONTUÁRIO — versão Supabase (dados salvos online, com login)
+//  A estrutura local { patients: [...], sessions: {nome: [...]} } foi mantida
+//  em memória para não mexer na interface; mas a fonte da verdade é o banco.
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Cliente Supabase ────────────────────────────────────────────────────────
+let supa = null;
+let currentUser = null;
+
+// ── State (espelho em memória do que está no banco) ─────────────────────────
+let db = { patients: [], sessions: {} };          // mesma forma de antes
+let patientIdByName = {};                          // nome -> id (uuid) no banco
+let currentPatient = null;                         // nome do paciente aberto
+
+// ════════════════════════════════════════════════════════════════════════════
+//  INICIALIZAÇÃO + AUTENTICAÇÃO
+// ════════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  // Validação básica da config
+  if (SUPABASE_URL.includes('COLE_AQUI') || SUPABASE_ANON_KEY.includes('COLE_AQUI')) {
+    document.getElementById('loadingOverlay').innerHTML =
+      '<div class="loading-text" style="max-width:300px;text-align:center;padding:20px">⚠️ Configuração do Supabase pendente.<br><br>Edite as variáveis SUPABASE_URL e SUPABASE_ANON_KEY no topo do arquivo (ver guia).</div>';
+    return;
+  }
+
+  supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Já existe sessão ativa? (login fica salvo de forma segura pelo próprio Supabase)
+  const { data: { session } } = await supa.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await enterApp();
+  } else {
+    showLogin();
+  }
+
+  // Reage a login/logout
+  supa.auth.onAuthStateChange((_event, session) => {
+    currentUser = session ? session.user : null;
+  });
+
+  // Enter envia o login
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+
+function showLogin() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('appRoot').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.textContent = '';
+
+  if (!email || !password) { errEl.textContent = 'Preencha e-mail e senha.'; return; }
+
+  btn.textContent = 'Entrando…';
+  btn.disabled = true;
+
+  const { data, error } = await supa.auth.signInWithPassword({ email, password });
+
+  btn.textContent = 'Entrar';
+  btn.disabled = false;
+
+  if (error) {
+    errEl.textContent = 'E-mail ou senha incorretos.';
+    return;
+  }
+  currentUser = data.user;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  await enterApp();
+}
+
+async function doLogout() {
+  if (!confirm('Deseja sair?')) return;
+  await supa.auth.signOut();
+  currentUser = null;
+  db = { patients: [], sessions: {} };
+  patientIdByName = {};
+  currentPatient = null;
+  document.getElementById('appRoot').classList.add('hidden');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  showLogin();
+}
+
+// Entra no app: carrega tudo do banco e mostra a interface
+async function enterApp() {
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  await loadAllData();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.remove('hidden');
+
+  // Estado inicial da interface (mês atual + data de hoje)
+  const now = new Date();
+  document.getElementById('monthFilter').value =
+    `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('fDate').value = now.toISOString().split('T')[0];
+
+  renderIndex();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CARGA DE DADOS DO BANCO  →  monta o objeto db { patients, sessions }
+// ════════════════════════════════════════════════════════════════════════════
+async function loadAllData() {
+  db = { patients: [], sessions: {} };
+  patientIdByName = {};
+
+  // 1) pacientes
+  const { data: patients, error: pErr } = await supa
+    .from('patients')
+    .select('id, name')
+    .order('name', { ascending: true });
+
+  if (pErr) { showToast('⚠️ Erro ao carregar pacientes'); console.error(pErr); return; }
+
+  patients.forEach(p => {
+    db.patients.push(p.name);
+    db.sessions[p.name] = [];
+    patientIdByName[p.name] = p.id;
+  });
+
+  // 2) sessões (todas de uma vez, depois distribui por paciente)
+  const { data: sessions, error: sErr } = await supa
+    .from('sessions')
+    .select('id, patient_id, date, tipo, valor, demanda, relato, conduta, link')
+    .order('date', { ascending: true });
+
+  if (sErr) { showToast('⚠️ Erro ao carregar sessões'); console.error(sErr); return; }
+
+  const idToName = {};
+  Object.entries(patientIdByName).forEach(([name, id]) => { idToName[id] = name; });
+
+  sessions.forEach(s => {
+    const name = idToName[s.patient_id];
+    if (!name) return;
+    db.sessions[name].push({
+      _id: s.id,                         // guardamos o id real do banco
+      date: s.date,
+      tipo: s.tipo,
+      valor: Number(s.valor) || 0,
+      demanda: s.demanda || '',
+      relato: s.relato || '',
+      conduta: s.conduta || '',
+      link: s.link || ''
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÍNDICE (lista de pacientes)
+// ════════════════════════════════════════════════════════════════════════════
+function renderIndex() {
+  const grid = document.getElementById('patientGrid');
+  if (!db.patients.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">👤</div>Nenhum paciente ainda.<br>Toque em "+ Adicionar paciente" para começar.</div>`;
+    return;
+  }
+  grid.innerHTML = db.patients.map(p => {
+    const sessions = db.sessions[p] || [];
+    const total = sessions.reduce((s,x) => s + (x.valor||0), 0);
+    const lastDate = sessions.length ? sessions[sessions.length-1].date : null;
+    const initials = p.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    return `
+      <div class="patient-card" onclick="openPatient('${escAttr(p)}')">
+        <div class="patient-avatar">${initials}</div>
+        <div class="patient-info">
+          <div class="patient-name">${escHtml(p)}</div>
+          <div class="stat-chips">
+            <span class="chip chip-teal">${sessions.length} sessão(ões)</span>
+            <span class="chip chip-green">R$ ${total.toFixed(2).replace('.',',')}</span>
+          </div>
+          ${lastDate ? `<div class="patient-meta" style="margin-top:4px">Última: ${formatDate(lastDate)}</div>` : ''}
+        </div>
+        <span class="patient-arrow">›</span>
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  VISÃO DO PACIENTE
+// ════════════════════════════════════════════════════════════════════════════
+function openPatient(name) {
+  currentPatient = name;
+  document.getElementById('screenIndex').classList.remove('active');
+  document.getElementById('screenPatient').classList.add('active');
+  document.getElementById('topbarTitle').textContent = name.split(' ')[0];
+  document.getElementById('topbarSub').textContent = 'Prontuário';
+  document.getElementById('topbarAction').textContent = '+ Sessão';
+  renderPatientView();
+  window.scrollTo(0,0);
+}
+
+function goIndex() {
+  currentPatient = null;
+  document.getElementById('screenPatient').classList.remove('active');
+  document.getElementById('screenIndex').classList.add('active');
+  document.getElementById('topbarTitle').textContent = 'Prontuário';
+  document.getElementById('topbarSub').textContent = 'Selecione um paciente';
+  document.getElementById('topbarAction').textContent = '+ Paciente';
+  renderIndex();
+}
+
+function renderPatientView() {
+  const name = currentPatient;
+  const sessions = (db.sessions[name] || []).slice().reverse();
+  const allSessions = db.sessions[name] || [];
+  const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+
+  document.getElementById('phAvatar').textContent = initials;
+  document.getElementById('phName').textContent = name;
+
+  const totalAll = allSessions.reduce((s,x) => s + (x.valor||0), 0);
+  document.getElementById('phStats').innerHTML = `
+    <div class="stat-block"><div class="stat-num">${allSessions.length}</div><div class="stat-lbl">Total</div></div>
+    <div class="stat-block"><div class="stat-num">R$${totalAll.toFixed(0)}</div><div class="stat-lbl">Receita</div></div>
+  `;
+
+  const monthVal = document.getElementById('monthFilter').value; // YYYY-MM
+  const [fy, fm] = monthVal ? monthVal.split('-').map(Number) : [0, 0];
+
+  const monthSessions = allSessions.filter(s => {
+    if (!monthVal) return true;
+    const [sy, sm] = s.date.split('-').map(Number);
+    return sy === fy && sm === fm;
+  });
+  const monthTotal = monthSessions.reduce((s,x) => s + (x.valor||0), 0);
+  document.getElementById('sumSessions').textContent = monthSessions.length;
+  document.getElementById('sumValue').textContent = 'R$ ' + monthTotal.toFixed(2).replace('.',',');
+
+  const filtered = sessions.filter(s => {
+    if (!monthVal) return true;
+    const [sy, sm] = s.date.split('-').map(Number);
+    return sy === fy && sm === fm;
+  });
+
+  const list = document.getElementById('sessionList');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div>Nenhuma sessão ${monthVal ? 'neste mês' : 'registrada'}.</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map((s) => {
+    const isRemark = s.tipo === 'Remarcação';
+    return `
+      <div class="session-card ${isRemark ? 'remarcacao' : 'normal'}">
+        <div class="session-card-top">
+          <div class="session-date">📅 ${formatDate(s.date)}</div>
+          <span class="session-badge ${isRemark ? 'badge-remark' : 'badge-normal'}">${escHtml(s.tipo)}</span>
+          <div class="session-value">R$ ${(s.valor||0).toFixed(2).replace('.',',')}</div>
+          <button class="session-delete" onclick="deleteSession('${escAttr(s._id)}')" title="Excluir">🗑</button>
+        </div>
+        <div class="session-fields">
+          ${s.demanda ? `<div><div class="session-field-label">Demanda</div><div class="session-field-value">${escHtml(s.demanda)}</div></div>` : ''}
+          ${s.relato  ? `<div><div class="session-field-label">Relato</div><div class="session-field-value">${escHtml(s.relato)}</div></div>` : ''}
+          ${s.conduta ? `<div><div class="session-field-label">Conduta</div><div class="session-field-value">${escHtml(s.conduta)}</div></div>` : ''}
+          ${s.link    ? `<div><div class="session-field-label">Atendimento completo</div><a href="${escAttr(s.link)}" target="_blank" class="session-link">🔗 Abrir link</a></div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SALVAR SESSÃO  →  grava no banco
+// ════════════════════════════════════════════════════════════════════════════
+async function saveSession() {
+  const date   = document.getElementById('fDate').value;
+  const tipo   = document.getElementById('fTipo').value;
+  const valor  = parseFloat(document.getElementById('fValor').value) || 0;
+  const demanda = document.getElementById('fDemanda').value.trim();
+  const relato = document.getElementById('fRelato').value.trim();
+  const conduta = document.getElementById('fConduta').value.trim();
+  const link   = document.getElementById('fLink').value.trim();
+
+  if (!date) { showToast('⚠️ Informe a data da sessão'); return; }
+
+  const patientId = patientIdByName[currentPatient];
+  if (!patientId) { showToast('⚠️ Paciente não encontrado'); return; }
+
+  showToast('💾 Salvando…');
+
+  const { data, error } = await supa
+    .from('sessions')
+    .insert({
+      patient_id: patientId,
+      user_id: currentUser.id,
+      date, tipo, valor, demanda, relato, conduta, link
+    })
+    .select()
+    .single();
+
+  if (error) { showToast('⚠️ Erro ao salvar'); console.error(error); return; }
+
+  // Atualiza estado em memória
+  db.sessions[currentPatient].push({
+    _id: data.id, date, tipo, valor, demanda, relato, conduta, link
+  });
+  db.sessions[currentPatient].sort((a,b) => a.date.localeCompare(b.date));
+
+  // Limpa o formulário (mantém data e tipo)
+  document.getElementById('fValor').value = '';
+  document.getElementById('fDemanda').value = '';
+  document.getElementById('fRelato').value = '';
+  document.getElementById('fConduta').value = '';
+  document.getElementById('fLink').value = '';
+
+  const [sy, sm] = date.split('-');
+  document.getElementById('monthFilter').value = `${sy}-${sm}`;
+
+  showToast('✅ Sessão salva!');
+  renderPatientView();
+  setTimeout(() => document.getElementById('sessionList').scrollIntoView({behavior:'smooth'}), 300);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  EXCLUIR SESSÃO  →  remove do banco (por id)
+// ════════════════════════════════════════════════════════════════════════════
+async function deleteSession(sessionId) {
+  if (!confirm('Excluir esta sessão?')) return;
+
+  const { error } = await supa.from('sessions').delete().eq('id', sessionId);
+  if (error) { showToast('⚠️ Erro ao excluir'); console.error(error); return; }
+
+  // Remove do estado em memória
+  const arr = db.sessions[currentPatient] || [];
+  const i = arr.findIndex(s => s._id === sessionId);
+  if (i > -1) arr.splice(i, 1);
+
+  showToast('🗑 Sessão excluída');
+  renderPatientView();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ADICIONAR PACIENTE  →  grava no banco
+// ════════════════════════════════════════════════════════════════════════════
+function openAddPatient() {
+  document.getElementById('modalAdd').classList.add('open');
+  document.getElementById('newPatientName').value = '';
+  setTimeout(() => document.getElementById('newPatientName').focus(), 100);
+}
+function closeAddPatient() { document.getElementById('modalAdd').classList.remove('open'); }
+
+async function confirmAddPatient() {
+  const name = document.getElementById('newPatientName').value.trim();
+  if (!name) { showToast('⚠️ Digite um nome'); return; }
+  if (db.patients.includes(name)) { showToast('⚠️ Paciente já existe'); return; }
+
+  const { data, error } = await supa
+    .from('patients')
+    .insert({ name, user_id: currentUser.id })
+    .select()
+    .single();
+
+  if (error) { showToast('⚠️ Erro ao adicionar'); console.error(error); return; }
+
+  // Atualiza estado em memória
+  db.patients.push(name);
+  db.patients.sort((a,b) => a.localeCompare(b));
+  db.sessions[name] = [];
+  patientIdByName[name] = data.id;
+
+  closeAddPatient();
+  showToast(`✅ ${name} adicionado(a)`);
+  renderIndex();
+}
+
+document.getElementById('newPatientName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmAddPatient();
+});
+
+// ── Topbar action ──────────────────────────────────────────────────────────
+function handleTopbarAction() {
+  if (currentPatient) {
+    document.getElementById('fDate').scrollIntoView({behavior:'smooth'});
+    document.getElementById('fDate').focus();
+  } else {
+    openAddPatient();
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function formatDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// Para uso dentro de atributos onclick='...' e href='...'
+function escAttr(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/'/g,'\\&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  EXPORTAR EXCEL (backup) — inalterado, lê do estado em memória
+// ════════════════════════════════════════════════════════════════════════════
+function exportExcel() {
+  if (!db.patients.length) { showToast('⚠️ Nenhum paciente para exportar'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  const idxRows = [['Paciente','Total Sessões','Total R$','Última Sessão']];
+  db.patients.forEach(p => {
+    const ss = db.sessions[p] || [];
+    const total = ss.reduce((a,x) => a + (x.valor||0), 0);
+    const last  = ss.length ? formatDate(ss[ss.length-1].date) : '—';
+    idxRows.push([p, ss.length, total, last]);
+  });
+  const wsIdx = XLSX.utils.aoa_to_sheet(idxRows);
+  wsIdx['!cols'] = [{wch:28},{wch:14},{wch:14},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, wsIdx, 'ÍNDICE');
+
+  db.patients.forEach(p => {
+    const ss = db.sessions[p] || [];
+    const rows = [['Data','Tipo','Valor (R$)','Demanda','Relato','Conduta','Link']];
+    ss.forEach(s => rows.push([
+      formatDate(s.date), s.tipo, s.valor||0,
+      s.demanda||'', s.relato||'', s.conduta||'', s.link||''
+    ]));
+    rows.push([]);
+    rows.push(['TOTAL SESSÕES', ss.length]);
+    rows.push(['TOTAL RECEBIDO (R$)', ss.reduce((a,x)=>a+(x.valor||0),0)]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:12},{wch:13},{wch:12},{wch:28},{wch:28},{wch:28},{wch:32}];
+    const sheetName = p.replace(/[:\\\/\?\*\[\]]/g,'').slice(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `Prontuario_backup_${stamp}.xlsx`);
+  showToast('✅ Excel baixado!');
+}
+
+// Fecha modal ao clicar fora
+document.getElementById('modalAdd').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeAddPatient();
+});
+</script>
+</body>
+</html>
