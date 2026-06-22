@@ -111,6 +111,13 @@
   .patient-name { font-size: 15px; font-weight: 700; }
   .patient-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .patient-arrow { color: var(--border); font-size: 18px; }
+  .patient-delete {
+    background: none; border: none; color: var(--muted);
+    font-size: 17px; cursor: pointer; padding: 8px;
+    flex-shrink: 0; border-radius: 8px; line-height: 1;
+    transition: background .15s;
+  }
+  .patient-delete:active { background: rgba(224,82,82,0.12); }
 
   .stat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .chip {
@@ -768,7 +775,7 @@ function renderIndex() {
           </div>
           ${lastDate ? `<div class="patient-meta" style="margin-top:4px">Última: ${formatDate(lastDate)}</div>` : ''}
         </div>
-        <span class="patient-arrow">›</span>
+        <button class="patient-delete" onclick="event.stopPropagation(); deletePatient('${escAttr(p)}')" title="Excluir paciente">🗑</button>
       </div>`;
   }).join('');
 }
@@ -957,6 +964,39 @@ async function confirmAddPatient() {
 
   closeAddPatient();
   showToast(`✅ ${name} adicionado(a)`);
+  renderIndex();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  EXCLUIR PACIENTE  →  remove do banco (sessões somem junto, via cascade)
+// ════════════════════════════════════════════════════════════════════════════
+async function deletePatient(name) {
+  const sessions = db.sessions[name] || [];
+  const qtd = sessions.length;
+
+  // Confirmação 1: avisa o que será apagado
+  const msg = qtd > 0
+    ? `Excluir "${name}"?\n\nIsso apaga o paciente E as ${qtd} sessão(ões) dele(a). Esta ação é PERMANENTE e não pode ser desfeita.`
+    : `Excluir "${name}"?\n\nEsta ação é permanente.`;
+  if (!confirm(msg)) return;
+
+  // Confirmação 2 (só se houver sessões — protege contra clique acidental)
+  if (qtd > 0 && !confirm(`Tem certeza? Os dados de ${qtd} sessão(ões) serão perdidos.\n\nDica: exporte o backup Excel antes, se ainda não fez.`)) return;
+
+  const patientId = patientIdByName[name];
+  if (!patientId) { showToast('⚠️ Paciente não encontrado'); return; }
+
+  showToast('🗑 Excluindo…');
+
+  const { error } = await supa.from('patients').delete().eq('id', patientId);
+  if (error) { showToast('⚠️ Erro ao excluir'); console.error(error); return; }
+
+  // Atualiza estado em memória
+  db.patients = db.patients.filter(p => p !== name);
+  delete db.sessions[name];
+  delete patientIdByName[name];
+
+  showToast(`🗑 ${name} excluído(a)`);
   renderIndex();
 }
 
