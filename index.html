@@ -13,35 +13,32 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    /* Paleta Âncora — terracota minimalista.
-       Os nomes antigos (--teal, --navy) foram mantidos e reapontados
-       para as novas cores, então todo o app se atualiza sem quebrar. */
-    --terra: #C0704F;          /* cor oficial da marca */
-    --terra-dark: #A85C3E;     /* terracota mais fechado, p/ texto sobre claro */
-    --terra-light: #F3E5DE;    /* terracota bem claro, fundos suaves */
+    /* Paleta Âncora — Contrastes Ajustados para Acessibilidade */
+    --terra: #C0704F;          
+    --terra-dark: #8C472D;     
+    --terra-light: #F3E5DE;    
     --terra-mid: #E4C7B8;
 
-    --navy: #3D3530;           /* antes azul; agora grafite quente (texto/topo) */
-    --teal: #C0704F;           /* antes verde-água; agora a marca */
+    --navy: #2C2622;           
+    --teal: #C0704F;           
     --teal-light: #F3E5DE;
-    --teal-mid: #E4C7B8;
-    --sand: #FBF8F4;           /* fundo creme */
+    --sand: #FBF8F4;           
     --white: #FFFFFF;
-    --text: #3D3530;           /* grafite quente */
-    --muted: #9A8E85;          /* cinza-areia p/ texto secundário */
-    --border: #EBE3DB;         /* bordas quase imperceptíveis */
-    --red: #C0574F;            /* vermelho dessaturado, harmônico */
-    --green: #7A8C5C;          /* verde-oliva dessaturado (pago) */
-    --orange: #C89B5A;         /* âmbar dessaturado (remarcação) */
-    --remark-bg: #F7EFE2;
-    --remark-border: #C89B5A;
+    
+    --text: #2C2622;           
+    --muted: #6B635C;          
+    --border: #E0D4C8;         
+    
+    --red: #AB362E;            
+    --green: #4D6134;          
+    --orange: #A16B16;         
+    
+    --remark-bg: #F2E3CD;      
     --normal-bg: #F3E5DE;
-    --normal-border: #C0704F;
 
     --radius: 16px;
     --radius-sm: 12px;
-    --shadow: 0 1px 3px rgba(61,53,48,0.04), 0 4px 16px rgba(61,53,48,0.04);
-    --shadow-lg: 0 4px 24px rgba(61,53,48,0.08);
+    --shadow-lg: 0 4px 24px rgba(44,38,34,0.08);
     --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
     --font-serif: 'Fraunces', 'Cormorant Garamond', Georgia, serif;
   }
@@ -50,7 +47,8 @@
 
   body {
     font-family: var(--font);
-    background: var(--sand);
+    background: linear-gradient(160deg, var(--terra-light) 0%, var(--sand) 45%, var(--terra-mid) 120%);
+    background-attachment: fixed;
     color: var(--text);
     min-height: 100vh;
     overscroll-behavior: none;
@@ -58,9 +56,22 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* ── EFEITO LIQUID GLASS GERAL ── */
+  .patient-card, .form-card, .summary-card, .info-card, .session-card, .payment-item, .fin-line, .fin-patient-card, .search-box, .month-filter, .appt-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: saturate(160%) blur(16px);
+    -webkit-backdrop-filter: saturate(160%) blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 16px rgba(44,38,34,0.06);
+    transition: border-color .15s, box-shadow .15s;
+  }
+
   /* ── TOP BAR ── */
   .topbar {
-    background: var(--sand);
+    background: rgba(251, 248, 244, 0.8);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
     color: var(--text);
     padding: 16px 20px 12px;
     display: flex;
@@ -69,852 +80,280 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(224, 212, 200, 0.5);
   }
-  .topbar-logo {
-    width: 34px; height: 34px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; color: var(--terra);
-  }
+  .topbar-logo { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--terra); }
   .topbar-logo svg { width: 26px; height: 26px; }
   .topbar-title { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; color: var(--text); }
-  .topbar-sub { font-size: 11px; color: var(--muted); margin-top: 0px; }
+  .topbar-sub { font-size: 11px; font-weight: 500; color: var(--muted); margin-top: 0px; }
   .topbar-right { margin-left: auto; display: flex; gap: 8px; }
-  .btn-icon {
-    background: var(--terra);
-    border: none; border-radius: 20px;
-    color: #fff; font-size: 13px; font-weight: 600;
-    padding: 8px 16px; cursor: pointer;
-    transition: opacity .15s;
-  }
+  .btn-icon { background: var(--terra); border: none; border-radius: 20px; color: #fff; font-size: 13px; font-weight: 700; padding: 8px 16px; cursor: pointer; transition: opacity .15s; }
   .btn-icon:active { opacity: 0.85; }
-  .btn-icon-ghost {
-    background: none; border: none; cursor: pointer;
-    color: var(--text); padding: 6px; display: flex;
-    align-items: center; justify-content: center;
-  }
-  .btn-icon-ghost svg { width: 22px; height: 22px; }
-  .btn-icon-ghost:active { opacity: 0.5; }
 
   /* ── SCREENS ── */
   .screen { display: none; padding: 20px 16px calc(110px + env(safe-area-inset-bottom, 0px)); }
   .screen.active { display: block; }
 
   /* ── INDEX ── */
-  .section-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--muted);
-    margin-bottom: 10px; padding-left: 4px;
-  }
-
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; padding-left: 4px; }
   .patient-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-
-  .patient-card {
-    background: var(--white);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    display: flex; align-items: center; gap: 14px;
-    box-shadow: var(--shadow);
-    cursor: pointer;
-    border: 1.5px solid transparent;
-    transition: border-color .15s, box-shadow .15s;
-  }
+  .patient-card { padding: 16px 18px; display: flex; align-items: center; gap: 14px; cursor: pointer; }
   .patient-card:active { border-color: var(--teal); box-shadow: var(--shadow-lg); }
-
-  .patient-avatar {
-    width: 44px; height: 44px; border-radius: 50%;
-    background: var(--teal-light);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 700; color: var(--teal);
-    flex-shrink: 0;
-  }
+  .patient-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--teal-light); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--terra-dark); flex-shrink: 0; }
   .patient-info { flex: 1; min-width: 0; }
-  .patient-name { font-size: 15px; font-weight: 700; }
-  .patient-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .patient-arrow { color: var(--border); font-size: 18px; }
-  .patient-delete {
-    background: none; border: none; color: var(--muted);
-    font-size: 17px; cursor: pointer; padding: 8px;
-    flex-shrink: 0; border-radius: 8px; line-height: 1;
-    transition: background .15s;
-  }
-  .patient-delete:active { background: rgba(224,82,82,0.12); }
+  .patient-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .patient-meta { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+  .patient-delete { background: none; border: none; color: var(--muted); font-size: 17px; cursor: pointer; padding: 8px; flex-shrink: 0; border-radius: 8px; transition: background .15s; }
+  .patient-delete:active { background: rgba(171, 54, 46, 0.12); color: var(--red); }
 
   .stat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .chip {
-    font-size: 11px; font-weight: 600; border-radius: 20px;
-    padding: 3px 10px;
-  }
+  .chip { font-size: 11px; font-weight: 700; border-radius: 20px; padding: 4px 10px; }
   .chip-teal { background: var(--teal-light); color: var(--terra-dark); }
-  .chip-green { background: #EEF0E6; color: #5F6E44; }
-  .chip-yellow { background: var(--remark-bg); color: #9A7636; }
-  .chip-red { background: #F6E7E5; color: #A64A43; }
+  .chip-green { background: #E7EBE1; color: var(--green); }
+  .chip-yellow { background: var(--remark-bg); color: var(--orange); }
+  .chip-red { background: #F4E2E1; color: var(--red); }
   .st-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
   .st-dot.ativo { background: var(--green); }
   .st-dot.ausente { background: var(--orange); }
   .st-dot.inativo { background: var(--red); }
 
-  .filter-tabs {
-    display: flex; gap: 8px; margin-bottom: 14px;
-    overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none;
-  }
+  .filter-tabs { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
   .filter-tabs::-webkit-scrollbar { display: none; }
-  .filter-tab {
-    flex-shrink: 0; padding: 8px 14px; border-radius: 20px;
-    border: 1.5px solid var(--border); background: var(--white);
-    color: var(--muted); font-size: 12px; font-weight: 700;
-    cursor: pointer; white-space: nowrap; transition: all .15s;
-  }
-  .filter-tab.active { border-color: var(--teal); background: var(--teal); color: var(--navy); }
+  .filter-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: rgba(255, 255, 255, 0.65); color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .filter-tab.active { border-color: var(--teal); background: var(--teal); color: #fff; }
 
-  .search-box {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--white); border-radius: var(--radius-sm);
-    padding: 0 12px; margin-bottom: 14px;
-    box-shadow: var(--shadow);
-    border: 1.5px solid transparent;
-    transition: border-color .15s;
-  }
+  .search-box { display: flex; align-items: center; gap: 8px; padding: 0 12px; margin-bottom: 14px; border-radius: var(--radius-sm); }
   .search-box:focus-within { border-color: var(--teal); }
-  .search-icon { font-size: 15px; opacity: 0.6; flex-shrink: 0; }
-  .search-input {
-    flex: 1; border: none; outline: none; background: transparent;
-    padding: 12px 0; font-size: 15px; font-family: var(--font);
-    color: var(--text);
-  }
+  .search-icon { font-size: 15px; color: var(--muted); flex-shrink: 0; }
+  .search-input { flex: 1; border: none; outline: none; background: transparent; padding: 12px 0; font-size: 15px; font-weight: 500; font-family: var(--font); color: var(--text); }
   .search-input::placeholder { color: var(--muted); }
-  .search-clear {
-    background: none; border: none; color: var(--muted);
-    font-size: 14px; cursor: pointer; padding: 4px 6px;
-    display: none; flex-shrink: 0;
-  }
+  .search-clear { background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer; padding: 4px 6px; display: none; flex-shrink: 0; }
   .search-clear.visible { display: block; }
 
-  .btn-add-patient {
-    width: 100%; padding: 15px;
-    background: var(--white);
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    color: var(--muted); font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: border-color .15s, color .15s;
-  }
-  .btn-add-patient:active { border-color: var(--teal); color: var(--teal); }
+  .btn-add-patient { width: 100%; padding: 15px; background: rgba(255, 255, 255, 0.5); border: 2px dashed var(--border); border-radius: var(--radius); color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s; }
+  .btn-add-patient:active { border-color: var(--teal); color: var(--terra-dark); }
 
   /* ── PATIENT VIEW ── */
-  .back-btn {
-    display: flex; align-items: center; gap: 6px;
-    background: none; border: none;
-    color: var(--teal); font-size: 14px; font-weight: 600;
-    cursor: pointer; padding: 0 0 16px;
-  }
+  .back-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; color: var(--terra-dark); font-size: 14px; font-weight: 700; cursor: pointer; padding: 0 0 16px; }
 
-  .patient-header {
-    background: var(--terra);
-    border-radius: var(--radius);
-    padding: 22px 20px;
-    color: #fff;
-    margin-bottom: 16px;
-    display: flex; gap: 16px; align-items: center;
-  }
-  .patient-header-avatar {
-    width: 52px; height: 52px; border-radius: 50%;
-    background: rgba(255,255,255,0.22);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0;
-  }
+  .patient-header { background: var(--terra); border-radius: var(--radius); padding: 22px 20px; color: #fff; margin-bottom: 16px; display: flex; gap: 16px; align-items: center; box-shadow: 0 8px 20px rgba(192, 112, 79, 0.25); }
+  .patient-header-avatar { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0; }
   .patient-header-name { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
   .patient-header-stats { display: flex; gap: 24px; margin-top: 10px; }
   .stat-block { text-align: center; }
   .stat-num { font-size: 20px; font-weight: 800; color: #fff; }
-  .stat-lbl { font-size: 10px; color: rgba(255,255,255,0.7); letter-spacing: 0.5px; text-transform: uppercase; }
+  .stat-lbl { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; text-transform: uppercase; }
 
-  /* Month filter */
-  .month-filter {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--white); border-radius: var(--radius-sm);
-    padding: 12px 16px; margin-bottom: 16px;
-    box-shadow: var(--shadow);
-  }
-  .month-filter label { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
-  .month-filter input {
-    flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
-    padding: 8px 10px; font-size: 14px; font-family: var(--font);
-    background: var(--sand); color: var(--text);
-    outline: none;
-  }
-  .month-filter input:focus { border-color: var(--teal); }
+  .month-filter { display: flex; align-items: center; gap: 10px; border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 16px; }
+  .month-filter label { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .month-filter input { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-weight: 600; font-family: var(--font); background: rgba(255, 255, 255, 0.5); color: var(--text); outline: none; }
+  .month-filter input:focus { border-color: var(--teal); background: #fff; }
 
   /* Form card */
-  .form-card {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    margin-bottom: 20px;
-  }
-  .form-card-header {
-    background: transparent;
-    padding: 16px 18px 4px;
-    font-size: 16px; font-weight: 700; color: var(--text);
-    display: flex; align-items: center; gap: 8px;
-    letter-spacing: -0.2px;
-  }
+  .form-card { overflow: hidden; margin-bottom: 20px; }
+  .form-card-header { padding: 16px 18px 4px; font-size: 16px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; }
   .form-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
   .form-row { display: flex; gap: 10px; }
   .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-  .form-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
-    text-transform: uppercase; color: var(--muted);
-  }
-  .form-input, .form-select, .form-textarea {
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 11px 13px;
-    font-size: 15px; font-family: var(--font);
-    color: var(--text); background: var(--sand);
-    outline: none; width: 100%;
-    transition: border-color .15s;
-    -webkit-appearance: none;
-  }
-  .form-input:focus, .form-select:focus, .form-textarea:focus {
-    border-color: var(--teal);
-    background: #fff;
-  }
+  .form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+  .form-input, .form-select, .form-textarea { border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 15px; font-family: var(--font); font-weight: 500; color: var(--text); background: rgba(255, 255, 255, 0.5); outline: none; width: 100%; transition: border-color .15s; -webkit-appearance: none; }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--muted); }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--teal); background: #fff; }
   .form-textarea { resize: none; line-height: 1.5; }
-  .form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237B8C99' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+  .form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B635C' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
-  .btn-save {
-    width: 100%; padding: 15px;
-    background: var(--terra); border: none;
-    border-radius: var(--radius-sm);
-    font-size: 16px; font-weight: 700; color: #fff;
-    cursor: pointer; letter-spacing: 0.2px;
-    transition: opacity .15s;
-  }
+  .btn-save { width: 100%; padding: 15px; background: var(--terra); border: none; border-radius: var(--radius-sm); font-size: 16px; font-weight: 700; color: #fff; cursor: pointer; letter-spacing: 0.2px; transition: opacity .15s; }
   .btn-save:active { opacity: 0.85; }
 
   /* Session list */
   .session-list { display: flex; flex-direction: column; gap: 10px; }
-
-  .session-card {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    border-left: 4px solid transparent;
-  }
-  .session-card.normal { border-left-color: var(--teal); }
+  .session-card { overflow: hidden; border-left: 4px solid transparent; border-top: 1px solid rgba(255,255,255,0.9); border-right: 1px solid rgba(255,255,255,0.9); border-bottom: 1px solid rgba(255,255,255,0.9); margin-bottom: 16px; }
+  .session-card.normal { border-left-color: var(--terra); }
   .session-card.remarcacao { border-left-color: var(--orange); }
 
-  .session-card-top {
-    padding: 12px 16px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .session-date { font-size: 13px; font-weight: 700; color: var(--navy); }
-  .session-badge {
-    font-size: 10px; font-weight: 700; border-radius: 20px;
-    padding: 3px 9px; letter-spacing: 0.3px;
-  }
-  .badge-normal { background: var(--normal-bg); color: var(--teal); }
+  .session-card-top { padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .session-date { font-size: 14px; font-weight: 800; color: var(--navy); }
+  .session-badge { font-size: 10px; font-weight: 800; border-radius: 20px; padding: 4px 9px; letter-spacing: 0.3px; }
+  .badge-normal { background: var(--normal-bg); color: var(--terra-dark); }
   .badge-remark { background: var(--remark-bg); color: var(--orange); }
   .session-value { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--green); }
 
   .session-fields { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 8px; }
-  .session-field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
-  .session-field-value { font-size: 13px; color: var(--text); margin-top: 2px; line-height: 1.4; }
-  .session-link { color: var(--teal); font-size: 13px; text-decoration: none; word-break: break-all; }
+  .session-field-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  .session-field-value { font-size: 14px; font-weight: 500; color: var(--text); margin-top: 2px; line-height: 1.4; }
+  .session-link { color: var(--terra-dark); font-size: 13px; font-weight: 700; text-decoration: none; word-break: break-all; }
   .session-link:hover { text-decoration: underline; }
-  .session-delete {
-    float: right; background: none; border: none;
-    color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px;
-  }
+  .session-delete { float: right; background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px; }
 
   /* MODAL */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(27,43,58,0.55); z-index: 200;
-    align-items: center; justify-content: center; padding: 20px;
-  }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(27,24,22,0.65); z-index: 200; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
   .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--white); border-radius: var(--radius);
-    padding: 24px; width: 100%; max-width: 360px;
-    box-shadow: var(--shadow-lg);
-    max-height: 85vh; overflow-y: auto;
-  }
-  .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .modal { background: var(--white); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 360px; box-shadow: var(--shadow-lg); max-height: 85vh; overflow-y: auto; }
+  .modal h3 { font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 16px; }
   .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-  .btn-cancel {
-    flex: 1; padding: 13px; background: var(--sand);
-    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-    font-size: 14px; font-weight: 600; cursor: pointer; color: var(--muted);
-  }
-  .btn-confirm {
-    flex: 1; padding: 13px; background: var(--teal);
-    border: none; border-radius: var(--radius-sm);
-    font-size: 14px; font-weight: 700; cursor: pointer; color: var(--navy);
-  }
+  .btn-cancel { flex: 1; padding: 13px; background: var(--sand); border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; cursor: pointer; color: var(--muted); }
+  .btn-confirm { flex: 1; padding: 13px; background: var(--teal); border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; cursor: pointer; color: #fff; }
 
-  .empty-state {
-    text-align: center; padding: 40px 20px;
-    color: var(--muted); font-size: 14px;
-  }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; font-weight: 500; }
   .empty-state-icon { font-size: 40px; margin-bottom: 10px; }
 
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(251,248,244,0.92);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    border-top: 1px solid var(--border);
+    background: rgba(251, 248, 244, 0.85);
+    backdrop-filter: saturate(180%) blur(24px);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    border-top: 1px solid rgba(224, 212, 200, 0.5);
     display: flex;
     z-index: 150;
-    /* Reserva a zona de gestos do iPhone (safe area), com mínimo garantido
-       para nunca ficar colado na barra do sistema (Siri / troca de app). */
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
   }
-  .nav-item {
-    flex: 1; background: none; border: none;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 10px 4px 6px; cursor: pointer;
-    color: var(--muted); font-size: 10px; font-weight: 600;
-    transition: color .15s;
-  }
-  .nav-item svg { width: 22px; height: 22px; stroke-width: 1.7; }
-  .nav-item.active { color: var(--terra); }
-
-  .dashboard-grid { display: flex; flex-direction: column; gap: 10px; }
-  .dashboard-row { display: flex; gap: 10px; }
+  .nav-item { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 6px; cursor: pointer; color: var(--muted); font-size: 11px; font-weight: 700; transition: color .15s; }
+  .nav-item svg { width: 24px; height: 24px; stroke-width: 1.8; }
+  .nav-item.active { color: var(--terra-dark); }
 
   /* ── DASHBOARD EDITORIAL ── */
   .dash-greeting { padding: 8px 2px 20px; }
-  .dash-greeting-eyebrow {
-    font-size: 12px; font-weight: 600; letter-spacing: 0.8px;
-    text-transform: uppercase; color: var(--terra);
-  }
-  .dash-greeting-title {
-    font-family: var(--font-serif);
-    font-optical-sizing: auto;
-    font-weight: 500;
-    font-size: 34px; line-height: 1.05; letter-spacing: -0.5px;
-    color: var(--text); margin-top: 6px;
-    font-variation-settings: 'SOFT' 40, 'opsz' 80;
-  }
+  .dash-greeting-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--terra-dark); }
+  .dash-greeting-title { font-family: var(--font-serif); font-weight: 600; font-size: 34px; line-height: 1.05; letter-spacing: -0.5px; color: var(--navy); margin-top: 6px; }
 
-  .dash-hero {
-    position: relative; overflow: hidden;
-    background: var(--terra);
-    border-radius: 22px;
-    padding: 26px 24px 22px;
-    color: #fff; margin-bottom: 22px;
-  }
-  .dash-hero-anchor {
-    position: absolute; right: -26px; top: -16px;
-    width: 150px; height: 150px;
-    color: rgba(255,255,255,0.13);
-    transform: rotate(8deg);
-    pointer-events: none;
-  }
-  .dash-hero-label {
-    font-size: 12px; font-weight: 600; letter-spacing: 0.6px;
-    text-transform: uppercase; color: rgba(255,255,255,0.75);
-    position: relative;
-  }
-  .dash-hero-value {
-    font-family: var(--font-serif);
-    font-optical-sizing: auto;
-    font-weight: 600; font-size: 46px; line-height: 1;
-    letter-spacing: -1.5px; margin: 8px 0 12px;
-    position: relative;
-    font-variation-settings: 'SOFT' 30, 'opsz' 144;
-  }
-  .dash-hero-meta {
-    font-size: 13px; color: rgba(255,255,255,0.9); font-weight: 500;
-    position: relative;
-  }
+  .dash-hero { position: relative; overflow: hidden; background: var(--terra); border-radius: 22px; padding: 26px 24px 22px; color: #fff; margin-bottom: 22px; box-shadow: 0 8px 20px rgba(192, 112, 79, 0.25); }
+  .dash-hero-anchor { position: absolute; right: -26px; top: -16px; width: 150px; height: 150px; color: rgba(255,255,255,0.18); transform: rotate(8deg); pointer-events: none; }
+  .dash-hero-label { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: rgba(255,255,255,0.9); position: relative; }
+  .dash-hero-value { font-family: var(--font-serif); font-weight: 700; font-size: 46px; line-height: 1; letter-spacing: -1.5px; margin: 8px 0 12px; position: relative; }
+  .dash-hero-meta { font-size: 14px; color: #fff; font-weight: 500; position: relative; }
   .dash-hero-meta span { font-weight: 800; }
 
   .dash-index { padding: 0 2px; }
-  .dash-index-header {
-    display: flex; align-items: baseline; justify-content: space-between;
-    padding-bottom: 10px;
-    border-bottom: 1.5px solid var(--terra);
-    margin-bottom: 2px;
-  }
-  .dash-index-title {
-    font-family: var(--font-serif); font-weight: 600; font-size: 22px;
-    color: var(--text); letter-spacing: -0.3px;
-    font-variation-settings: 'SOFT' 40, 'opsz' 40;
-  }
-  .dash-index-total {
-    font-family: var(--font-serif); font-weight: 600; font-size: 22px;
-    color: var(--terra);
-  }
-  .dash-index-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 15px 2px;
-    border-bottom: 1px solid var(--border);
-  }
-  .dash-index-key {
-    font-size: 15px; font-weight: 500; color: var(--text);
-    display: flex; align-items: center;
-  }
+  .dash-index-header { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 2px solid var(--terra-dark); margin-bottom: 2px; }
+  .dash-index-title { font-family: var(--font-serif); font-weight: 700; font-size: 22px; color: var(--navy); letter-spacing: -0.3px; }
+  .dash-index-total { font-family: var(--font-serif); font-weight: 700; font-size: 22px; color: var(--terra-dark); }
+  .dash-index-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 2px; border-bottom: 1px solid var(--border); }
+  .dash-index-key { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; }
   .dash-index-key .st-dot { width: 9px; height: 9px; margin-right: 10px; }
-  .dash-index-val {
-    font-family: var(--font-serif); font-weight: 600; font-size: 20px;
-    color: var(--text);
-    font-variation-settings: 'opsz' 40;
-  }
-  .dashboard-card {
-    flex: 1; background: var(--white); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 16px; text-align: center;
-  }
-  .dashboard-card-num { font-size: 24px; font-weight: 800; color: var(--teal); }
-  .dashboard-card-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; margin-top: 4px; }
-  .dashboard-card.status-ativo .dashboard-card-num { color: var(--green); }
-  .dashboard-card.status-ausente .dashboard-card-num { color: var(--orange); }
-  .dashboard-card.status-inativo .dashboard-card-num { color: var(--red); }
+  .dash-index-val { font-family: var(--font-serif); font-weight: 700; font-size: 20px; color: var(--text); }
 
-  .coming-soon {
-    text-align: center; padding: 60px 24px; color: var(--muted);
-  }
+  .coming-soon { text-align: center; padding: 60px 24px; color: var(--muted); }
   .coming-soon-icon { font-size: 44px; margin-bottom: 14px; }
-  .coming-soon h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
-  .coming-soon p { font-size: 13px; line-height: 1.5; }
+  .coming-soon h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .coming-soon p { font-size: 14px; font-weight: 500; line-height: 1.5; }
 
   /* ── AGENDA ── */
-  .agenda-nav {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--white); border-radius: var(--radius-sm);
-    padding: 8px; margin-bottom: 12px; box-shadow: var(--shadow);
-  }
-  .agenda-nav-btn {
-    background: var(--sand); border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm); color: var(--text);
-    font-size: 16px; font-weight: 700; cursor: pointer;
-    width: 40px; height: 40px; flex-shrink: 0;
-  }
+  .agenda-nav { display: flex; align-items: center; gap: 8px; padding: 8px; margin-bottom: 12px; border-radius: var(--radius-sm); }
+  .agenda-nav-btn { background: rgba(255, 255, 255, 0.7); border: 1.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 18px; font-weight: 700; cursor: pointer; width: 40px; height: 40px; flex-shrink: 0; }
   .agenda-nav-btn:active { background: var(--teal-light); }
-  .agenda-nav-label { flex: 1; text-align: center; font-size: 13px; font-weight: 700; color: var(--text); }
+  .agenda-nav-label { flex: 1; text-align: center; font-size: 14px; font-weight: 700; color: var(--text); }
   .agenda-view-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
-  .agenda-view-btn {
-    flex: 1; padding: 9px; border-radius: var(--radius-sm);
-    border: 1.5px solid var(--border); background: var(--white);
-    color: var(--muted); font-size: 13px; font-weight: 700; cursor: pointer;
-    transition: all .15s;
-  }
-  .agenda-view-btn.active { border-color: var(--teal); background: var(--teal); color: var(--navy); }
+  .agenda-view-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: rgba(255, 255, 255, 0.65); color: var(--muted); font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; }
+  .agenda-view-btn.active { border-color: var(--teal); background: var(--teal); color: #fff; }
 
   .agenda-day-group { margin-bottom: 18px; }
-  .agenda-day-header {
-    font-size: 12px; font-weight: 800; color: var(--navy);
-    text-transform: uppercase; letter-spacing: 0.5px;
-    margin-bottom: 8px; padding-left: 4px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .agenda-day-header.is-today { color: var(--teal); }
-  .agenda-today-pill {
-    font-size: 9px; font-weight: 800; background: var(--teal); color: var(--navy);
-    padding: 2px 7px; border-radius: 20px; letter-spacing: 0.3px;
-  }
+  .agenda-day-header { font-size: 13px; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding-left: 4px; display: flex; align-items: center; gap: 8px; }
+  .agenda-day-header.is-today { color: var(--terra-dark); }
+  .agenda-today-pill { font-size: 10px; font-weight: 800; background: var(--navy); color: #fff; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.3px; }
 
-  .appt-card {
-    background: var(--white); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 12px 14px;
-    display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
-    border-left: 4px solid var(--border);
-  }
+  .appt-card { padding: 12px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; border-left: 4px solid var(--border); }
   .appt-card.st-confirmado { border-left-color: var(--green); }
   .appt-card.st-naoconfirmado { border-left-color: var(--muted); }
   .appt-card.st-falta { border-left-color: var(--red); }
   .appt-card.st-remarcado { border-left-color: var(--orange); }
-  .appt-time {
-    font-size: 15px; font-weight: 800; color: var(--navy);
-    flex-shrink: 0; width: 52px;
-  }
+  .appt-time { font-size: 15px; font-weight: 800; color: var(--navy); flex-shrink: 0; width: 52px; }
   .appt-info { flex: 1; min-width: 0; }
-  .appt-name { font-size: 14px; font-weight: 700; }
-  .appt-status-btn {
-    margin-top: 4px; font-size: 11px; font-weight: 700;
-    border: none; border-radius: 20px; padding: 4px 12px;
-    cursor: pointer;
-  }
-  .appt-status-btn.st-confirmado { background: #EAF9F2; color: var(--green); }
-  .appt-status-btn.st-naoconfirmado { background: var(--sand); color: var(--muted); border: 1.5px solid var(--border); }
-  .appt-status-btn.st-falta { background: #FBEAEA; color: var(--red); }
+  .appt-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .appt-status-btn { margin-top: 4px; font-size: 11px; font-weight: 800; border: none; border-radius: 20px; padding: 5px 12px; cursor: pointer; }
+  .appt-status-btn.st-confirmado { background: #E7EBE1; color: var(--green); }
+  .appt-status-btn.st-naoconfirmado { background: rgba(255,255,255,0.7); color: var(--muted); border: 1.5px solid var(--border); }
+  .appt-status-btn.st-falta { background: #F4E2E1; color: var(--red); }
   .appt-status-btn.st-remarcado { background: var(--remark-bg); color: var(--orange); }
-  .appt-delete {
-    background: none; border: none; color: var(--muted);
-    font-size: 15px; cursor: pointer; padding: 6px; flex-shrink: 0;
-  }
-  .btn-add-appt {
-    width: 100%; padding: 14px; margin-bottom: 16px;
-    background: var(--teal); border: none; border-radius: var(--radius-sm);
-    color: var(--navy); font-size: 15px; font-weight: 700; cursor: pointer;
-  }
+  .appt-delete { background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 6px; flex-shrink: 0; }
+  .btn-add-appt { width: 100%; padding: 15px; margin-bottom: 16px; background: var(--terra); border: none; border-radius: var(--radius-sm); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
   .btn-add-appt:active { opacity: 0.85; }
 
   /* ── PAGAMENTOS ── */
-  .payment-summary {
-    display: flex; gap: 8px; margin-bottom: 12px;
-  }
-  .payment-summary-card {
-    flex: 1; background: var(--white); border-radius: var(--radius-sm);
-    padding: 12px 10px; box-shadow: var(--shadow); text-align: center;
-  }
+  .payment-summary { display: flex; gap: 8px; margin-bottom: 12px; }
+  .payment-summary-card { flex: 1; background: rgba(255, 255, 255, 0.4); border-radius: var(--radius-sm); padding: 12px 10px; text-align: center; border: 1px solid var(--border); }
   .payment-summary-num { font-size: 17px; font-weight: 800; }
   .payment-summary-num.pos { color: var(--green); }
   .payment-summary-num.neg { color: var(--red); }
-  .payment-summary-num.neutral { color: var(--teal); }
-  .payment-summary-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.3px; margin-top: 3px; }
+  .payment-summary-num.neutral { color: var(--terra-dark); }
+  .payment-summary-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.3px; margin-top: 3px; }
 
-  .pay-badge {
-    font-size: 10px; font-weight: 700; border-radius: 20px;
-    padding: 3px 9px; letter-spacing: 0.2px;
-  }
-  .pay-badge.paga { background: #EAF9F2; color: var(--green); }
-  .pay-badge.pendente { background: #FBEAEA; color: var(--red); }
-  .pay-badge.naocobrada { background: var(--sand); color: var(--muted); border: 1px solid var(--border); }
+  .pay-badge { font-size: 10px; font-weight: 800; border-radius: 20px; padding: 4px 10px; letter-spacing: 0.2px; }
+  .pay-badge.paga { background: #E7EBE1; color: var(--green); }
+  .pay-badge.pendente { background: #F4E2E1; color: var(--red); }
+  .pay-badge.naocobrada { background: rgba(255,255,255,0.6); color: var(--muted); border: 1px solid var(--border); }
 
-  .payment-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-  .payment-item {
-    background: var(--white); border-radius: var(--radius-sm);
-    box-shadow: var(--shadow); padding: 10px 14px;
-    display: flex; align-items: center; gap: 10px;
-    border-left: 4px solid var(--green);
-  }
-  .payment-item-date { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .payment-item-amount { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--green); }
+  .payment-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .payment-item { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-left: 4px solid var(--green); }
+  .payment-item-date { font-size: 13px; color: var(--text); font-weight: 600; }
+  .payment-item-amount { margin-left: auto; font-size: 15px; font-weight: 800; color: var(--green); }
   .payment-item-delete { background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer; padding: 4px; }
 
-  .charge-toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-top: 4px;
-  }
-
   /* ── FINANCEIRO DA SESSÃO ── */
-  .session-finance {
-    margin: 8px 16px 0; padding: 10px 12px;
-    background: var(--sand); border-radius: var(--radius-sm);
-    font-size: 12px;
-  }
-  .session-finance-row { display: flex; justify-content: space-between; padding: 2px 0; }
-  .session-finance-row.total { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 6px; font-weight: 800; }
-  .session-finance-label { color: var(--muted); font-weight: 600; }
-  .session-finance-val { font-weight: 700; }
+  .session-finance { margin: 8px 16px 0; padding: 12px 14px; background: rgba(255, 255, 255, 0.4); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; }
+  .session-finance-row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .session-finance-row.total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-weight: 800; }
+  .session-finance-label { color: var(--muted); font-weight: 700; }
+  .session-finance-val { font-weight: 700; color: var(--text); }
   .session-finance-val.desc { color: var(--red); }
   .session-finance-val.liquido { color: var(--green); }
-  .mode-badge {
-    font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
-    background: var(--teal-light); color: var(--teal); letter-spacing: 0.2px;
-  }
+  .mode-badge { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; background: var(--teal-light); color: var(--terra-dark); letter-spacing: 0.2px; }
 
   /* ── RESUMO FINANCEIRO ── */
-  .fin-big-card {
-    background: var(--navy); border-radius: var(--radius);
-    padding: 18px; color: #fff; margin-bottom: 16px;
-  }
-  .fin-big-label { font-size: 11px; color: #8AABB8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
-  .fin-big-value { font-size: 30px; font-weight: 800; color: var(--teal); margin-top: 4px; }
-  .fin-breakdown { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-  .fin-line {
-    display: flex; justify-content: space-between; align-items: center;
-    background: var(--white); border-radius: var(--radius-sm);
-    padding: 12px 14px; box-shadow: var(--shadow); font-size: 13px;
-  }
-  .fin-line-label { color: var(--muted); font-weight: 600; }
+  .fin-big-card { background: var(--navy); border-radius: var(--radius); padding: 20px; color: #fff; margin-bottom: 16px; box-shadow: 0 8px 20px rgba(44,38,34, 0.2); }
+  .fin-big-label { font-size: 12px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; }
+  .fin-big-value { font-size: 32px; font-weight: 800; color: var(--teal-mid); margin-top: 6px; }
+  
+  .fin-breakdown { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .fin-line { display: flex; justify-content: space-between; align-items: center; padding: 14px; font-size: 14px; }
+  .fin-line-label { color: var(--text); font-weight: 700; }
   .fin-line-value { font-weight: 800; }
   .fin-line-value.receita { color: var(--green); }
   .fin-line-value.desc { color: var(--red); }
-  .fin-line-value.lucro { color: var(--teal); }
+  .fin-line-value.lucro { color: var(--terra-dark); }
 
-  .fin-patient-card {
-    background: var(--white); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px;
-  }
-  .fin-patient-name { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
-  .fin-patient-grid { display: flex; flex-direction: column; gap: 4px; }
-  .fin-patient-row { display: flex; justify-content: space-between; font-size: 12px; }
-  .fin-patient-row .lbl { color: var(--muted); }
-  .fin-patient-row .val { font-weight: 700; }
-  .fin-patient-row.total { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 6px; }
-  .fin-patient-row.total .val { color: var(--teal); font-weight: 800; }
+  .fin-patient-card { padding: 16px; margin-bottom: 10px; }
+  .fin-patient-name { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 10px; }
+  .fin-patient-grid { display: flex; flex-direction: column; gap: 6px; }
+  .fin-patient-row { display: flex; justify-content: space-between; font-size: 13px; }
+  .fin-patient-row .lbl { color: var(--muted); font-weight: 600; }
+  .fin-patient-row .val { font-weight: 800; color: var(--text); }
+  .fin-patient-row.total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; }
+  .fin-patient-row.total .val { color: var(--terra-dark); font-size: 14px; }
 
-  .btn-export {
-    width: 100%; padding: 15px;
-    background: var(--navy); border: none;
-    border-radius: var(--radius-sm);
-    color: #fff; font-size: 14px; font-weight: 700;
-    cursor: pointer; display: flex; align-items: center;
-    justify-content: center; gap: 8px;
-    transition: opacity .15s;
-  }
+  .btn-export { width: 100%; padding: 15px; background: var(--navy); border: none; border-radius: var(--radius-sm); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity .15s; }
   .btn-export:active { opacity: 0.8; }
-  .btn-export-teal { background: var(--teal); color: var(--navy); }
+  .btn-export-teal { background: var(--terra); color: #fff; }
 
-  .toast {
-    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-    background: var(--navy); color: #fff;
-    padding: 12px 22px; border-radius: 40px;
-    font-size: 14px; font-weight: 600;
-    box-shadow: var(--shadow-lg);
-    opacity: 0; transition: opacity .3s;
-    z-index: 300; pointer-events: none; white-space: nowrap;
-  }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 14px 24px; border-radius: 40px; font-size: 14px; font-weight: 700; box-shadow: var(--shadow-lg); opacity: 0; transition: opacity .3s; z-index: 300; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
 
-  /* Month summary bar */
-  .month-summary {
-    display: flex; gap: 8px; margin-bottom: 16px;
-  }
-  .summary-card {
-    flex: 1; background: var(--white); border-radius: var(--radius-sm);
-    padding: 12px 14px; box-shadow: var(--shadow); text-align: center;
-  }
-  .summary-card-num { font-size: 20px; font-weight: 800; color: var(--teal); }
-  .summary-card-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-top: 2px; }
+  .summary-card { flex: 1; padding: 12px 14px; text-align: center; }
+  .summary-card-num { font-size: 20px; font-weight: 800; color: var(--terra-dark); }
+  .summary-card-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-top: 2px; }
 
-  /* Toggle group (Sim/Não) */
   .toggle-group { display: flex; gap: 8px; }
-  .toggle-btn {
-    flex: 1; padding: 11px; border-radius: var(--radius-sm);
-    border: 1.5px solid var(--border); background: var(--sand);
-    color: var(--muted); font-size: 14px; font-weight: 600;
-    cursor: pointer; text-align: center; transition: all .15s;
-  }
-  .toggle-btn.active { border-color: var(--teal); background: var(--teal-light); color: var(--teal); }
+  .toggle-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: rgba(255, 255, 255, 0.5); color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; transition: all .15s; }
+  .toggle-btn.active { border-color: var(--teal); background: var(--teal-light); color: var(--terra-dark); }
 
-  /* Patient info card (patient view) */
-  .info-card {
-    background: var(--white); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 14px 16px;
-    margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;
-  }
-  .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
-  .info-row-label { color: var(--muted); font-weight: 600; }
-  .info-row-value { color: var(--text); font-weight: 600; text-align: right; }
-  .ibp-badge {
-    display: inline-block; font-size: 10px; font-weight: 700;
-    padding: 2px 8px; border-radius: 20px; background: var(--teal-light); color: var(--teal);
-  }
-  .status-toggle-group { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .status-toggle-btn {
-    padding: 7px 12px; border-radius: 20px;
-    border: 1.5px solid var(--border); background: var(--sand);
-    color: var(--muted); font-size: 11px; font-weight: 700;
-    cursor: pointer; transition: all .15s;
-  }
-  .status-toggle-btn.active-auto { border-color: var(--teal); background: var(--teal-light); color: var(--teal); }
-  .status-toggle-btn.active-ativo { border-color: var(--green); background: #EAF9F2; color: var(--green); }
+  .info-card { padding: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+  .info-row-label { color: var(--muted); font-weight: 700; }
+  .info-row-value { color: var(--text); font-weight: 700; text-align: right; }
+  .ibp-badge { display: inline-block; font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 20px; background: var(--teal-light); color: var(--terra-dark); }
+  
+  .status-toggle-group { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .status-toggle-btn { padding: 8px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: rgba(255, 255, 255, 0.5); color: var(--muted); font-size: 12px; font-weight: 800; cursor: pointer; transition: all .15s; }
+  .status-toggle-btn.active-auto { border-color: var(--teal); background: var(--teal-light); color: var(--terra-dark); }
+  .status-toggle-btn.active-ativo { border-color: var(--green); background: #E7EBE1; color: var(--green); }
   .status-toggle-btn.active-ausente { border-color: var(--orange); background: var(--remark-bg); color: var(--orange); }
-  .status-toggle-btn.active-inativo { border-color: var(--red); background: #FBEAEA; color: var(--red); }
+  .status-toggle-btn.active-inativo { border-color: var(--red); background: #F4E2E1; color: var(--red); }
 
-  /* Loading overlay */
-  .loading-overlay {
-    position: fixed; inset: 0; background: var(--sand);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 500; flex-direction: column; gap: 16px;
-  }
-  .spinner {
-    width: 40px; height: 40px; border: 4px solid var(--border);
-    border-top-color: var(--teal); border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
+  .loading-overlay { position: fixed; inset: 0; background: var(--sand); display: flex; align-items: center; justify-content: center; z-index: 500; flex-direction: column; gap: 16px; }
+  .spinner { width: 44px; height: 44px; border: 4px solid var(--border); border-top-color: var(--terra); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { color: var(--muted); font-size: 14px; font-weight: 600; }
+  .loading-text { color: var(--navy); font-size: 15px; font-weight: 700; }
   .hidden { display: none !important; }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --sand: #211D1A;
-      --white: #2C2724;
-      --text: #F0E9E3;
-      --muted: #A89C93;
-      --border: #3A342F;
-      --terra-light: #3A2E28;
-      --teal-light: #3A2E28;
-      --normal-bg: #3A2E28;
-      --remark-bg: #3A322528;
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     TEMAS — cada tema redefine a cor da marca e derivados.
-     Aplicados via [data-theme] no <html>.
-     ══════════════════════════════════════════════════════════════════════ */
-  html[data-theme="terracota"] {
-    --terra: #C0704F; --terra-dark: #A85C3E; --terra-light: #F3E5DE; --terra-mid: #E4C7B8;
-    --teal: #C0704F; --teal-light: #F3E5DE;
-  }
-  html[data-theme="oliva"] {
-    --terra: #7A8C5C; --terra-dark: #5F6E44; --terra-light: #EEF0E6; --terra-mid: #D2DAC0;
-    --teal: #7A8C5C; --teal-light: #EEF0E6;
-    --text: #3A3D34; --navy: #3A3D34;
-  }
-  html[data-theme="azul"] {
-    --terra: #4A7C8C; --terra-dark: #386472; --terra-light: #E3EEF1; --terra-mid: #BBD6DE;
-    --teal: #4A7C8C; --teal-light: #E3EEF1;
-    --text: #2E3B40; --navy: #2E3B40;
-  }
-  html[data-theme="ameixa"] {
-    --terra: #8C6580; --terra-dark: #6F4E66; --terra-light: #F0E7ED; --terra-mid: #DAC7D4;
-    --teal: #8C6580; --teal-light: #F0E7ED;
-    --text: #3D343A; --navy: #3D343A;
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     FUNDOS — aplicados via [data-bg] no <body>.
-     ══════════════════════════════════════════════════════════════════════ */
-  body[data-bg="plain"] { background: var(--sand); }
-  body[data-bg="gradient"] {
-    background: linear-gradient(160deg, var(--terra-light) 0%, var(--sand) 45%, var(--terra-mid) 120%);
-    background-attachment: fixed;
-  }
-  body[data-bg="warm"] {
-    background: linear-gradient(180deg, #FBF3EC 0%, #F6E6DC 100%);
-    background-attachment: fixed;
-  }
-  body[data-bg="anchor"] {
-    background-color: var(--sand);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%23C0704F' stroke-opacity='0.06' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='4.2' r='2.2'/%3E%3Cline x1='12' y1='6.4' x2='12' y2='20.5'/%3E%3Cline x1='8.5' y1='9.5' x2='15.5' y2='9.5'/%3E%3Cpath d='M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5'/%3E%3C/svg%3E");
-    background-size: 120px 120px;
-    background-attachment: fixed;
-  }
-  body[data-bg="anchor-dark"] {
-    background-color: var(--navy);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-opacity='0.05' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='4.2' r='2.2'/%3E%3Cline x1='12' y1='6.4' x2='12' y2='20.5'/%3E%3Cline x1='8.5' y1='9.5' x2='15.5' y2='9.5'/%3E%3Cpath d='M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5'/%3E%3C/svg%3E");
-    background-size: 120px 120px;
-    background-attachment: fixed;
-    --text: #F0E9E3; --muted: #C7BAB0; --white: rgba(255,255,255,0.08); --border: rgba(255,255,255,0.12);
-    --sand: #2A2420;
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     EFEITO VIDRO — quando html[data-glass="on"], cards e nav ganham
-     translucidez + blur (frosted glass estilo iOS).
-     ══════════════════════════════════════════════════════════════════════ */
-  html[data-glass="on"] .patient-card,
-  html[data-glass="on"] .form-card,
-  html[data-glass="on"] .summary-card,
-  html[data-glass="on"] .info-card,
-  html[data-glass="on"] .session-card,
-  html[data-glass="on"] .payment-item,
-  html[data-glass="on"] .fin-line,
-  html[data-glass="on"] .fin-patient-card,
-  html[data-glass="on"] .search-box,
-  html[data-glass="on"] .month-filter,
-  html[data-glass="on"] .appt-card {
-    background: rgba(255,255,255,0.55);
-    backdrop-filter: saturate(160%) blur(18px);
-    -webkit-backdrop-filter: saturate(160%) blur(18px);
-    border: 1px solid rgba(255,255,255,0.6);
-    box-shadow: 0 1px 2px rgba(61,53,48,0.03), 0 8px 24px rgba(61,53,48,0.06);
-  }
-  html[data-glass="on"] .bottom-nav {
-    background: rgba(255,255,255,0.6);
-    backdrop-filter: saturate(180%) blur(24px);
-    -webkit-backdrop-filter: saturate(180%) blur(24px);
-  }
-  html[data-glass="on"] .topbar {
-    background: rgba(251,248,244,0.72);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-  }
-  /* Ajuste do vidro sobre fundo escuro */
-  html[data-glass="on"] body[data-bg="anchor-dark"] .patient-card,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .form-card,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .summary-card,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .info-card,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .session-card,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .fin-patient-card,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .search-box,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .month-filter,
-  html[data-glass="on"] body[data-bg="anchor-dark"] .appt-card {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.14);
-    box-shadow: none;
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     PAINEL DE CONFIGURAÇÕES
-     ══════════════════════════════════════════════════════════════════════ */
-  .settings-sheet {
-    position: fixed; inset: 0; z-index: 400;
-    display: none; align-items: flex-end;
-    background: rgba(45,38,34,0.4);
-    backdrop-filter: blur(2px);
-  }
-  .settings-sheet.open { display: flex; }
-  .settings-panel {
-    background: var(--sand);
-    width: 100%; max-height: 88vh; overflow-y: auto;
-    border-radius: 24px 24px 0 0;
-    padding: 8px 20px calc(28px + env(safe-area-inset-bottom, 0));
-    animation: sheetUp .3s cubic-bezier(0.32, 0.72, 0, 1);
-  }
-  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-  .settings-grabber {
-    width: 38px; height: 5px; border-radius: 3px;
-    background: var(--border); margin: 10px auto 16px;
-  }
-  .settings-title {
-    font-family: var(--font-serif); font-weight: 600; font-size: 24px;
-    color: var(--text); margin-bottom: 4px; letter-spacing: -0.3px;
-    font-variation-settings: 'SOFT' 40, 'opsz' 60;
-  }
-  .settings-section-label {
-    font-size: 12px; font-weight: 700; letter-spacing: 0.6px;
-    text-transform: uppercase; color: var(--muted);
-    margin: 22px 0 12px;
-  }
-  .theme-swatches { display: flex; gap: 12px; }
-  .theme-swatch {
-    flex: 1; aspect-ratio: 1; border-radius: 16px;
-    border: 2.5px solid transparent; cursor: pointer;
-    display: flex; align-items: flex-end; justify-content: center;
-    padding-bottom: 8px; font-size: 11px; font-weight: 700; color: #fff;
-    transition: transform .12s;
-  }
-  .theme-swatch:active { transform: scale(0.95); }
-  .theme-swatch.selected { border-color: var(--text); }
-  .bg-swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .bg-swatch {
-    aspect-ratio: 1.4; border-radius: 14px; cursor: pointer;
-    border: 2.5px solid transparent; position: relative; overflow: hidden;
-    transition: transform .12s;
-  }
-  .bg-swatch:active { transform: scale(0.95); }
-  .bg-swatch.selected { border-color: var(--terra); }
-  .bg-swatch-name {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    font-size: 10px; font-weight: 700; text-align: center;
-    padding: 3px; background: rgba(255,255,255,0.7); color: var(--text);
-  }
-  .settings-toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 0; border-top: 1px solid var(--border);
-  }
-  .settings-toggle-info-title { font-size: 15px; font-weight: 600; color: var(--text); }
-  .settings-toggle-info-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .switch {
-    width: 51px; height: 31px; border-radius: 31px; border: none;
-    background: var(--border); position: relative; cursor: pointer;
-    transition: background .2s; flex-shrink: 0;
-  }
-  .switch.on { background: var(--terra); }
-  .switch::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 27px; height: 27px; border-radius: 50%; background: #fff;
-    transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  .switch.on::after { transform: translateX(20px); }
-  .settings-done {
-    width: 100%; padding: 15px; margin-top: 20px;
-    background: var(--terra); border: none; border-radius: var(--radius-sm);
-    color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
-  }
-
 </style>
 </head>
 <body>
@@ -926,8 +365,6 @@
   const SUPABASE_URL = 'https://fmfcylptbfxhwljhmune.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_xVYJpE_q8CL3ugACHbDcsQ_TAJSyiRN';
 
-  // Login automático (sem tela de login). Preencha com o e-mail e senha
-  // criados na Etapa 4 do guia (Authentication → Users).
   const AUTO_LOGIN_EMAIL = 'leticiarosaa10@hotmail.com';
   const AUTO_LOGIN_PASSWORD = 'Lucas123*';
 </script>
@@ -959,9 +396,6 @@
     </div>
     <div class="topbar-right">
       <button class="btn-icon" id="topbarAction" onclick="handleTopbarAction()">+ Paciente</button>
-      <button class="btn-icon-ghost" onclick="openSettings()" title="Configurações" aria-label="Configurações">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-      </button>
     </div>
   </div>
 
@@ -974,7 +408,7 @@
       <h1 class="dash-greeting-title" id="dashGreeting">Bom dia</h1>
     </div>
 
-    <!-- Herói: receita do mês, com âncora d'água -->
+    <!-- Herói -->
     <div class="dash-hero">
       <svg class="dash-hero-anchor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="4.2" r="2.2"/><line x1="12" y1="6.4" x2="12" y2="20.5"/>
@@ -1008,7 +442,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <!-- SCREEN: INDEX -->
@@ -1059,7 +492,7 @@
     <div class="form-card">
       <div class="form-card-header">Backup e exportação</div>
       <div class="form-body">
-        <p style="font-size:13px;color:var(--muted);line-height:1.5">
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;font-weight:500;">
           Exporta todos os pacientes e sessões para uma planilha Excel,
           com uma aba de índice e uma aba por paciente.
         </p>
@@ -1095,12 +528,12 @@
     </div>
 
     <!-- Month summary -->
-    <div class="month-summary">
-      <div class="summary-card">
+    <div class="month-summary" style="display:flex;gap:8px;margin-bottom:16px;">
+      <div class="summary-card patient-card" style="padding:12px 14px">
         <div class="summary-card-num" id="sumSessions">0</div>
         <div class="summary-card-lbl">Sessões no mês</div>
       </div>
-      <div class="summary-card">
+      <div class="summary-card patient-card" style="padding:12px 14px">
         <div class="summary-card-num" id="sumValue">R$ 0</div>
         <div class="summary-card-lbl">Total no mês</div>
       </div>
@@ -1280,41 +713,6 @@
       </div>
     </div>
   </div>
-  <!-- SETTINGS SHEET -->
-  <div class="settings-sheet" id="settingsSheet">
-    <div class="settings-panel">
-      <div class="settings-grabber"></div>
-      <div class="settings-title">Personalizar</div>
-
-      <div class="settings-section-label">Tema</div>
-      <div class="theme-swatches" id="themeSwatches">
-        <div class="theme-swatch" data-theme="terracota" style="background:#C0704F" onclick="setTheme('terracota')">Terracota</div>
-        <div class="theme-swatch" data-theme="oliva" style="background:#7A8C5C" onclick="setTheme('oliva')">Oliva</div>
-        <div class="theme-swatch" data-theme="azul" style="background:#4A7C8C" onclick="setTheme('azul')">Azul</div>
-        <div class="theme-swatch" data-theme="ameixa" style="background:#8C6580" onclick="setTheme('ameixa')">Ameixa</div>
-      </div>
-
-      <div class="settings-section-label">Fundo</div>
-      <div class="bg-swatches" id="bgSwatches">
-        <div class="bg-swatch" data-bg="plain" style="background:#FBF8F4" onclick="setBackground('plain')"><span class="bg-swatch-name">Liso</span></div>
-        <div class="bg-swatch" data-bg="gradient" style="background:linear-gradient(160deg,#F3E5DE,#FBF8F4,#E4C7B8)" onclick="setBackground('gradient')"><span class="bg-swatch-name">Degradê</span></div>
-        <div class="bg-swatch" data-bg="warm" style="background:linear-gradient(180deg,#FBF3EC,#F6E6DC)" onclick="setBackground('warm')"><span class="bg-swatch-name">Quente</span></div>
-        <div class="bg-swatch" data-bg="anchor" style="background:#FBF8F4 url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23C0704F' stroke-opacity='0.25' stroke-width='1'%3E%3Ccircle cx='12' cy='4.2' r='2.2'/%3E%3Cline x1='12' y1='6.4' x2='12' y2='20.5'/%3E%3Cline x1='8.5' y1='9.5' x2='15.5' y2='9.5'/%3E%3Cpath d='M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5'/%3E%3C/svg%3E&quot;) repeat" onclick="setBackground('anchor')"><span class="bg-swatch-name">Âncora</span></div>
-        <div class="bg-swatch" data-bg="anchor-dark" style="background:#3D3530 url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-opacity='0.2' stroke-width='1'%3E%3Ccircle cx='12' cy='4.2' r='2.2'/%3E%3Cline x1='12' y1='6.4' x2='12' y2='20.5'/%3E%3Cline x1='8.5' y1='9.5' x2='15.5' y2='9.5'/%3E%3Cpath d='M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5'/%3E%3C/svg%3E&quot;) repeat" onclick="setBackground('anchor-dark')"><span class="bg-swatch-name">Âncora escura</span></div>
-      </div>
-
-      <div class="settings-section-label">Efeito</div>
-      <div class="settings-toggle-row" style="border-top:none">
-        <div>
-          <div class="settings-toggle-info-title">Efeito vidro</div>
-          <div class="settings-toggle-info-sub">Cartões translúcidos, estilo iPhone</div>
-        </div>
-        <button class="switch" id="glassSwitch" onclick="toggleGlass()"></button>
-      </div>
-
-      <button class="settings-done" onclick="closeSettings()">Concluído</button>
-    </div>
-  </div>
 
   <!-- BOTTOM NAV -->
   <div class="bottom-nav" id="bottomNav">
@@ -1347,18 +745,16 @@
 
 <script>
 // ════════════════════════════════════════════════════════════════════════════
-//  PRONTUÁRIO — versão Supabase, login automático (sem tela de login)
+//  PRONTUÁRIO — versão Supabase, login automático
 // ════════════════════════════════════════════════════════════════════════════
 
 let supa = null;
 let currentUser = null;
 
-// db.patients agora guarda OBJETOS (não só o nome), para caber os novos campos.
-// Mantemos db.sessions[name] como antes, indexado pelo nome.
 let db = { patients: [], sessions: {}, appointments: [], payments: {} };
 let patientIdByName = {};
 let currentPatient = null;
-let ibpSelected = false; // estado do toggle Sim/Não no modal de novo paciente
+let ibpSelected = false; 
 
 // ════════════════════════════════════════════════════════════════════════════
 //  INICIALIZAÇÃO + LOGIN AUTOMÁTICO
@@ -1408,7 +804,6 @@ async function doAutoLogin() {
 // Entra no app: carrega tudo do banco e mostra a interface
 async function enterApp() {
   document.getElementById('loadingOverlay').classList.remove('hidden');
-  await loadSettings();
   await loadAllData();
   document.getElementById('loadingOverlay').classList.add('hidden');
   document.getElementById('appRoot').classList.remove('hidden');
@@ -1478,28 +873,28 @@ async function loadAllData() {
     });
   });
 
-  // 3) agendamentos (agenda)
+  // 3) agendamentos
   db.appointments = [];
   const { data: appts, error: aErr } = await supa
     .from('appointments')
     .select('id, patient_id, date, time, status')
     .order('date', { ascending: true });
 
-  if (aErr) { console.error(aErr); return; } // agenda é opcional; não trava o resto
-
-  appts.forEach(a => {
-    const name = idToName[a.patient_id];
-    db.appointments.push({
-      _id: a.id,
-      patientId: a.patient_id,
-      patientName: name || '(paciente removido)',
-      date: a.date,
-      time: a.time,
-      status: a.status
+  if (!aErr && appts) {
+    appts.forEach(a => {
+      const name = idToName[a.patient_id];
+      db.appointments.push({
+        _id: a.id,
+        patientId: a.patient_id,
+        patientName: name || '(paciente removido)',
+        date: a.date,
+        time: a.time,
+        status: a.status
+      });
     });
-  });
+  }
 
-  // 4) pagamentos, indexados por nome do paciente
+  // 4) pagamentos
   db.payments = {};
   db.patients.forEach(p => { db.payments[p.name] = []; });
   const { data: payments, error: payErr } = await supa
@@ -1507,83 +902,23 @@ async function loadAllData() {
     .select('id, patient_id, date, amount')
     .order('date', { ascending: true });
 
-  if (payErr) { console.error(payErr); return; }
-
-  payments.forEach(pay => {
-    const name = idToName[pay.patient_id];
-    if (!name) return;
-    if (!db.payments[name]) db.payments[name] = [];
-    db.payments[name].push({
-      _id: pay.id,
-      date: pay.date,
-      amount: Number(pay.amount) || 0
+  if (!payErr && payments) {
+    payments.forEach(pay => {
+      const name = idToName[pay.patient_id];
+      if (!name) return;
+      if (!db.payments[name]) db.payments[name] = [];
+      db.payments[name].push({
+        _id: pay.id,
+        date: pay.date,
+        amount: Number(pay.amount) || 0
+      });
     });
-  });
+  }
 }
 
-// Busca o objeto do paciente pelo nome
 function getPatientObj(name) {
   return db.patients.find(p => p.name === name);
 }
-
-// ════════════════════════════════════════════════════════════════════════════
-//  CONFIGURAÇÕES (tema, fundo, vidro) — persistidas no Supabase
-// ════════════════════════════════════════════════════════════════════════════
-let settings = { theme: 'terracota', background: 'plain', glass: true };
-
-function applySettings() {
-  document.documentElement.setAttribute('data-theme', settings.theme);
-  document.body.setAttribute('data-bg', settings.background);
-  document.documentElement.setAttribute('data-glass', settings.glass ? 'on' : 'off');
-
-  // Marca as opções selecionadas no painel
-  document.querySelectorAll('#themeSwatches .theme-swatch').forEach(el => {
-    el.classList.toggle('selected', el.dataset.theme === settings.theme);
-  });
-  document.querySelectorAll('#bgSwatches .bg-swatch').forEach(el => {
-    el.classList.toggle('selected', el.dataset.bg === settings.background);
-  });
-  const sw = document.getElementById('glassSwitch');
-  if (sw) sw.classList.toggle('on', settings.glass);
-}
-
-async function loadSettings() {
-  try {
-    const { data, error } = await supa
-      .from('app_settings')
-      .select('theme, background, glass')
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
-    if (!error && data) {
-      settings = {
-        theme: data.theme || 'terracota',
-        background: data.background || 'plain',
-        glass: data.glass !== false
-      };
-    }
-  } catch (e) { console.error(e); }
-  applySettings();
-}
-
-async function saveSettings() {
-  try {
-    await supa.from('app_settings').upsert({
-      user_id: currentUser.id,
-      theme: settings.theme,
-      background: settings.background,
-      glass: settings.glass,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
-  } catch (e) { console.error(e); }
-}
-
-function openSettings() { document.getElementById('settingsSheet').classList.add('open'); }
-function closeSettings() { document.getElementById('settingsSheet').classList.remove('open'); }
-
-function setTheme(theme) { settings.theme = theme; applySettings(); saveSettings(); }
-function setBackground(bg) { settings.background = bg; applySettings(); saveSettings(); }
-function toggleGlass() { settings.glass = !settings.glass; applySettings(); saveSettings(); }
-
 
 // ════════════════════════════════════════════════════════════════════════════
 //  NAVEGAÇÃO POR ABAS (barra inferior)
@@ -1655,7 +990,6 @@ function renderDashboard() {
   document.getElementById('dashInativos').textContent = inativos;
   document.getElementById('dashTotalPacientes').textContent = db.patients.length;
 
-  // Saudação conforme a hora + data por extenso
   const now = new Date();
   const h = now.getHours();
   const saud = h < 12 ? 'Bom dia' : (h < 18 ? 'Boa tarde' : 'Boa noite');
@@ -1684,8 +1018,6 @@ function renderDashboard() {
 
 // ════════════════════════════════════════════════════════════════════════════
 //  RESUMO FINANCEIRO MENSAL
-//  Soma o cálculo por sessão (computeSessionFinance) de todas as sessões do
-//  mês selecionado. Faltas não cobradas ficam de fora. Total geral + por paciente.
 // ════════════════════════════════════════════════════════════════════════════
 function renderFinanceiro() {
   const monthVal = document.getElementById('finMonthFilter').value;
@@ -1700,7 +1032,6 @@ function renderFinanceiro() {
     const sessions = (db.sessions[p.name] || []).filter(s => {
       const [sy, sm] = s.date.split('-').map(Number);
       if (sy !== fy || sm !== fm) return false;
-      // Falta não cobrada não entra no financeiro
       if (s.tipo === 'Falta' && s.chargeAbsence === false) return false;
       return true;
     });
@@ -1709,10 +1040,7 @@ function renderFinanceiro() {
     let bruto = 0, ibp = 0, sublease = 0, liquido = 0;
     sessions.forEach(s => {
       const fin = computeSessionFinance(s, p);
-      bruto += fin.bruto;
-      ibp += fin.percentIbp;
-      sublease += fin.sublocacao;
-      liquido += fin.liquido;
+      bruto += fin.bruto; ibp += fin.percentIbp; sublease += fin.sublocacao; liquido += fin.liquido;
     });
 
     gBruto += bruto; gIbp += ibp; gSublease += sublease; gLiquido += liquido;
@@ -1727,7 +1055,6 @@ function renderFinanceiro() {
     return;
   }
 
-  // Ordena por lucro decrescente
   perPatient.sort((a,b) => b.liquido - a.liquido);
 
   let html = `
@@ -1745,7 +1072,7 @@ function renderFinanceiro() {
   `;
 
   html += perPatient.map(pp => `
-    <div class="fin-patient-card">
+    <div class="fin-patient-card patient-card" style="display:block">
       <div class="fin-patient-name">${escHtml(pp.name)}</div>
       <div class="fin-patient-grid">
         <div class="fin-patient-row"><span class="lbl">Sessões</span><span class="val">${pp.count}</span></div>
@@ -1763,8 +1090,8 @@ function renderFinanceiro() {
 // ════════════════════════════════════════════════════════════════════════════
 //  AGENDA
 // ════════════════════════════════════════════════════════════════════════════
-let agendaView = 'day';           // 'day' | 'week'
-let agendaRefDate = new Date();   // data de referência sendo exibida
+let agendaView = 'day';           
+let agendaRefDate = new Date();   
 
 const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -1789,7 +1116,6 @@ function agendaNavigate(dir) {
   renderAgenda();
 }
 
-// Retorna início (domingo) da semana de uma data
 function startOfWeek(d) {
   const r = new Date(d);
   r.setDate(r.getDate() - r.getDay());
@@ -1808,7 +1134,6 @@ function renderAgenda() {
   const content = document.getElementById('agendaContent');
   const todayStr = toDateStr(new Date());
 
-  // Define quais dias mostrar
   let days = [];
   if (agendaView === 'day') {
     days = [new Date(agendaRefDate)];
@@ -1834,7 +1159,6 @@ function renderAgenda() {
       .filter(a => a.date === dStr)
       .sort((a,b) => a.time.localeCompare(b.time));
 
-    // Na visão "dia", sempre mostra o cabeçalho; na semana, só dias com atendimento
     if (agendaView === 'week' && !appts.length) return;
 
     totalNoPeriodo += appts.length;
@@ -1872,7 +1196,6 @@ function renderAgenda() {
   content.innerHTML = html;
 }
 
-// Ciclo de status ao tocar: Não confirmado → Confirmado → Falta → Remarcado → ...
 const STATUS_CYCLE = ['Não confirmado', 'Confirmado', 'Falta', 'Remarcado'];
 async function cycleApptStatus(apptId) {
   const appt = db.appointments.find(a => a._id === apptId);
@@ -1887,17 +1210,12 @@ async function cycleApptStatus(apptId) {
   renderAgenda();
 }
 
-// ── Modal de novo agendamento ───────────────────────────────────────────────
 function openAddAppt() {
   if (!db.patients.length) { showToast('⚠️ Cadastre um paciente primeiro'); return; }
-
   const sel = document.getElementById('apptPatient');
   sel.innerHTML = db.patients.map(p => `<option value="${escAttr(p.name)}">${escHtml(p.name)}</option>`).join('');
-
-  // Preenche data com o dia atualmente em foco na agenda
   document.getElementById('apptDate').value = toDateStr(agendaRefDate);
   document.getElementById('apptTime').value = '';
-
   document.getElementById('modalAppt').classList.add('open');
 }
 function closeAddAppt() { document.getElementById('modalAppt').classList.remove('open'); }
@@ -1908,7 +1226,6 @@ async function confirmAddAppt() {
   const time = document.getElementById('apptTime').value;
 
   if (!date || !time) { showToast('⚠️ Preencha data e horário'); return; }
-
   const patientId = patientIdByName[name];
   if (!patientId) { showToast('⚠️ Paciente não encontrado'); return; }
 
@@ -1926,10 +1243,8 @@ async function confirmAddAppt() {
 
   closeAddAppt();
   showToast('✅ Agendamento criado!');
-
-  // Vai para o dia do agendamento
   agendaRefDate = parseDateStr(date);
-  if (agendaView === 'day') renderAgenda(); else renderAgenda();
+  renderAgenda();
 }
 
 async function deleteAppt(apptId) {
@@ -2010,7 +1325,6 @@ function openPatient(name) {
   const topbarAction = document.getElementById('topbarAction');
   topbarAction.classList.remove('hidden');
   topbarAction.textContent = '+ Sessão';
-  // Data padrão do campo de pagamento = hoje; reseta controle de falta
   document.getElementById('fPayDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('fTipo').value = 'Normal';
   document.getElementById('fModo').value = 'Presencial no IBP';
@@ -2040,7 +1354,6 @@ function renderPatientView() {
     <div class="stat-block"><div class="stat-num">R$${totalAll.toFixed(0)}</div><div class="stat-lbl">Receita</div></div>
   `;
 
-  // Info card com os dados cadastrais
   const age = calcAge(p.birthDate);
   const status = computeStatus(p);
   const infoRows = [];
@@ -2079,7 +1392,6 @@ function renderPatientView() {
   document.getElementById('sumSessions').textContent = monthSessions.length;
   document.getElementById('sumValue').textContent = 'R$ ' + monthTotal.toFixed(2).replace('.',',');
 
-  // Pagamentos (resumo + lista) e status de pagamento por sessão
   renderPayments(name);
   const payInfo = computePaymentStatus(name);
 
@@ -2150,7 +1462,6 @@ async function saveSession() {
   const patientId = patientIdByName[currentPatient];
   if (!patientId) { showToast('⚠️ Paciente não encontrado'); return; }
 
-  // Só faz sentido "cobrar falta" quando o tipo é Falta; senão cobra sempre.
   const chargeAbsence = (tipo === 'Falta') ? chargeAbsenceSelected : true;
   const attendanceMode = document.getElementById('fModo').value;
   const subleaseValue = (attendanceMode === 'Online')
@@ -2332,7 +1643,7 @@ function normalize(s) {
   return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
 
-// ── Idade a partir da data de nascimento ─────────────────────────────────────
+// ── Idade ─────────────────────────────────────
 function calcAge(birthDate) {
   if (!birthDate) return null;
   const [by, bm, bd] = birthDate.split('-').map(Number);
@@ -2344,14 +1655,13 @@ function calcAge(birthDate) {
   return age;
 }
 
-// ── Status do paciente (automático por frequência, ou manual se sobrescrito) ─
+// ── Status do paciente ─
 function computeStatus(p) {
   if (p.statusOverride) return p.statusOverride;
-
   const sessions = db.sessions[p.name] || [];
-  if (!sessions.length) return 'Ativo'; // recém-cadastrado, sem sessão ainda
+  if (!sessions.length) return 'Ativo'; 
 
-  const lastDateStr = sessions[sessions.length - 1].date; // sessions vêm ordenadas por data crescente
+  const lastDateStr = sessions[sessions.length - 1].date; 
   const lastDate = new Date(lastDateStr + 'T00:00:00');
   const today = new Date();
   const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
@@ -2361,7 +1671,7 @@ function computeStatus(p) {
     case 'Semanal':   ausenteAt = 14; inativoAt = 28; break;
     case 'Quinzenal': ausenteAt = 28; inativoAt = 56; break;
     case 'Mensal':    ausenteAt = 45; inativoAt = 90; break;
-    default:          ausenteAt = 45; inativoAt = 90; break; // "Outro" ou sem frequência
+    default:          ausenteAt = 45; inativoAt = 90; break; 
   }
 
   if (diffDays >= inativoAt) return 'Inativo';
@@ -2379,7 +1689,7 @@ function statusEmoji(status) {
   return `<span class="st-dot ${cls}"></span>`;
 }
 
-// ── Filtro de status na lista de pacientes ──────────────────────────────────
+// ── Filtro de status ──────────────────────────────────
 let currentStatusFilter = 'Todos';
 function setStatusFilter(filter) {
   currentStatusFilter = filter;
@@ -2389,9 +1699,8 @@ function setStatusFilter(filter) {
   renderIndex();
 }
 
-// ── Alterar status manualmente (ou voltar para automático) ─────────────────
+// ── Alterar status manualmente ─────────────────
 async function setPatientStatus(name, value) {
-  // value: null (Automático) | 'Ativo' | 'Ausente' | 'Inativo'
   const patientId = patientIdByName[name];
   if (!patientId) return;
 
@@ -2412,10 +1721,6 @@ async function setPatientStatus(name, value) {
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MOTOR DE PAGAMENTOS
-//  Modelo: saldo em dinheiro. Soma todos os pagamentos do paciente e abate o
-//  valor de cada sessão cobrável, da mais antiga para a mais nova. Enquanto o
-//  saldo cobre o valor da sessão, ela é "Paga"; quando não cobre, "Pendente".
-//  Faltas só entram na conta se chargeAbsence === true.
 // ════════════════════════════════════════════════════════════════════════════
 function computePaymentStatus(name) {
   const sessions = (db.sessions[name] || []).slice().sort((a,b) => a.date.localeCompare(b.date));
@@ -2424,7 +1729,7 @@ function computePaymentStatus(name) {
 
   let saldo = totalPago;
   let totalPendente = 0;
-  const statusById = {}; // _id -> 'Paga' | 'Pendente' | 'NaoCobrada'
+  const statusById = {}; 
 
   sessions.forEach(s => {
     const cobra = (s.tipo !== 'Falta') || (s.chargeAbsence === true);
@@ -2453,12 +1758,6 @@ function payBadgeHtml(statusPag) {
 
 // ════════════════════════════════════════════════════════════════════════════
 //  FINANCEIRO POR SESSÃO
-//  Regra confirmada:
-//   - Porcentagem só para paciente captado pelo IBP:
-//       Presencial no IBP → 30%   |   Online / Presencial outro local → 20%
-//   - Sublocação: valor livre informado; sempre 0 quando Online.
-//   - Paciente não-IBP: sem porcentagem; sublocação conforme informado (0 no online).
-//  Retorna { bruto, percentIbp, sublocacao, liquido }.
 // ════════════════════════════════════════════════════════════════════════════
 function computeSessionFinance(session, patient) {
   const bruto = session.valor || 0;
@@ -2471,9 +1770,7 @@ function computeSessionFinance(session, patient) {
     percentIbp = bruto * rate;
   }
 
-  // Online nunca tem sublocação
   const sublocacao = (modo === 'Online') ? 0 : (session.subleaseValue || 0);
-
   const liquido = bruto - percentIbp - sublocacao;
   return { bruto, percentIbp, sublocacao, liquido };
 }
@@ -2538,13 +1835,13 @@ async function deletePayment(payId) {
   renderPatientView();
 }
 
-// ── Controles do formulário de sessão (tipo Falta + cobrar) ─────────────────
+// ── Controles do formulário de sessão ─────────────────
 let chargeAbsenceSelected = true;
 function onTipoChange() {
   const tipo = document.getElementById('fTipo').value;
   const row = document.getElementById('chargeAbsenceRow');
   row.style.display = (tipo === 'Falta') ? 'flex' : 'none';
-  if (tipo === 'Falta') setCharge(true); // padrão: cobra
+  if (tipo === 'Falta') setCharge(true); 
 }
 function setCharge(value) {
   chargeAbsenceSelected = value;
@@ -2552,7 +1849,6 @@ function setCharge(value) {
   document.getElementById('chargeNo').classList.toggle('active', value === false);
 }
 
-// Esconde o campo de sublocação quando a forma é Online
 function onModoChange() {
   const modo = document.getElementById('fModo').value;
   const row = document.getElementById('subleaseRow');
@@ -2594,7 +1890,6 @@ function exportExcel() {
     'Valor Bruto (R$)','Recebido (R$)','Pago IBP (R$)','Sublocação (R$)','Lucro Líquido (R$)'
   ]];
 
-  // Acumuladores gerais
   let gSessoes=0, gPagas=0, gPend=0, gFaltas=0, gRemarc=0;
   let gBruto=0, gRecebido=0, gIbp=0, gSub=0, gLiquido=0;
 
@@ -2607,14 +1902,12 @@ function exportExcel() {
     let pagas=0, pend=0, faltas=0, remarc=0;
 
     ss.forEach(s => {
-      // Contagens
       if (s.tipo === 'Falta') faltas++;
       if (s.tipo === 'Remarcação') remarc++;
       const st = pag.statusById[s._id];
       if (st === 'Paga') pagas++;
       else if (st === 'Pendente') pend++;
 
-      // Financeiro (faltas não cobradas não entram)
       const entra = !(s.tipo === 'Falta' && s.chargeAbsence === false);
       if (entra) {
         const fin = computeSessionFinance(s, p);
@@ -2632,7 +1925,6 @@ function exportExcel() {
     gBruto+=bruto; gRecebido+=recebido; gIbp+=ibp; gSub+=sub; gLiquido+=liquido;
   });
 
-  // Linha de totais
   resumoRows.push([]);
   resumoRows.push([
     'TOTAL GERAL','', gSessoes, gPagas, gPend, gFaltas, gRemarc,
@@ -2646,14 +1938,13 @@ function exportExcel() {
   ];
   XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo por Paciente');
 
-  // ── ABA 2: SESSÕES DETALHADAS (histórico completo) ────────────────────────
+  // ── ABA 2: SESSÕES DETALHADAS ────────────────────────
   const detRows = [[
     'Paciente','Data','Mês','Tipo','Forma de Atendimento','Valor (R$)',
     'Status Pagamento','Desconto IBP (R$)','Sublocação (R$)','Líquido (R$)',
     'Demanda','Relato','Conduta','Link'
   ]];
 
-  // Junta todas as sessões de todos os pacientes, ordenadas por data
   const todas = [];
   db.patients.forEach(p => {
     (db.sessions[p.name] || []).forEach(s => todas.push({ p, s }));
@@ -2688,15 +1979,11 @@ function exportExcel() {
   showToast('✅ Excel baixado!');
 }
 
-// Fecha modal ao clicar fora
 document.getElementById('modalAdd').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeAddPatient();
 });
 document.getElementById('modalAppt').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeAddAppt();
-});
-document.getElementById('settingsSheet').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeSettings();
 });
 </script>
 </body>
