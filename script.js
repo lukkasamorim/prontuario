@@ -16,7 +16,9 @@ let currentUser = null;
 let db = { patients: [], sessions: {}, appointments: [], payments: {} };
 let patientIdByName = {};
 let currentPatient = null;
-let ibpSelected = false; 
+let ibpSelected = false;
+let editingPatientName = null;   // quando != null, o modal de paciente está editando
+let editingSessionId = null;     // quando != null, o formulário de sessão está editando
 
 // ════════════════════════════════════════════════════════════════════════════
 //  INICIALIZAÇÃO + LOGIN AUTOMÁTICO
@@ -108,7 +110,7 @@ async function loadAllData() {
 
   const { data: sessions, error: sErr } = await supa
     .from('sessions')
-    .select('id, patient_id, date, tipo, valor, demanda, relato, conduta, link, charge_absence, attendance_mode, sublease_value')
+    .select('id, patient_id, date, tipo, valor, demanda, relato, conduta, link, charge_absence, attendance_mode, sublease_value, session_number')
     .order('date', { ascending: true });
 
   if (sErr) { showToast('⚠️ Erro ao carregar sessões'); console.error(sErr); return; }
@@ -130,7 +132,8 @@ async function loadAllData() {
       link: s.link || '',
       chargeAbsence: s.charge_absence !== false,
       attendanceMode: s.attendance_mode || 'Presencial no IBP',
-      subleaseValue: Number(s.sublease_value) || 0
+      subleaseValue: Number(s.sublease_value) || 0,
+      sessionNumber: (s.session_number === null || s.session_number === undefined) ? null : Number(s.session_number)
     });
   });
 
@@ -346,8 +349,8 @@ function renderFinanceiro() {
 // ════════════════════════════════════════════════════════════════════════════
 //  AGENDA
 // ════════════════════════════════════════════════════════════════════════════
-let agendaView = 'day';           
-let agendaRefDate = new Date();   
+let agendaView = 'day';
+let agendaRefDate = new Date();
 
 const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -508,6 +511,48 @@ async function deleteAppt(apptId) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  DUPLICADOS — detecta nomes parecidos entre pacientes
+// ════════════════════════════════════════════════════════════════════════════
+// Distância de Levenshtein (número de edições entre duas strings)
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[m][n];
+}
+
+// Retorna pares de nomes considerados possíveis duplicados
+function findDuplicates() {
+  const names = db.patients.map(p => p.name);
+  const pairs = [];
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      const a = normalize(names[i]).replace(/\s+/g, ' ').trim();
+      const b = normalize(names[j]).replace(/\s+/g, ' ').trim();
+      if (!a || !b) continue;
+      // Idênticos após normalizar (ex.: "Maria " x "maria") ou muito próximos
+      const dist = levenshtein(a, b);
+      const maxLen = Math.max(a.length, b.length);
+      // Considera duplicado se: iguais normalizados, ou 1-2 edições em nomes de tamanho razoável,
+      // ou um nome contém o outro inteiro (ex.: "Ana" x "Ana Paula" NÃO — evita falso positivo exigindo proximidade)
+      const isNearIdentical = (dist === 0) || (dist <= 2 && maxLen >= 5 && dist / maxLen <= 0.2);
+      if (isNearIdentical) {
+        pairs.push([names[i], names[j]]);
+      }
+    }
+  }
+  return pairs;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  ÍNDICE (Lista de Pacientes)
 // ════════════════════════════════════════════════════════════════════════════
 function renderIndex() {
@@ -522,6 +567,27 @@ function renderIndex() {
     return;
   }
 
+  // Aviso de possíveis duplicados (só quando não há busca ativa, pra não poluir)
+  let dupBanner = '';
+  if (!term) {
+    const dups = findDuplicates();
+    if (dups.length) {
+      const items = dups.map(([a, b]) =>
+        `<div class="dup-pair">“${escHtml(a)}” e “${escHtml(b)}”</div>`
+      ).join('');
+      dupBanner = `
+        <div class="dup-alert">
+          <div class="dup-alert-head">
+            <span class="dup-alert-title">⚠️ Possíveis pacientes duplicados</span>
+          </div>
+          <div class="dup-alert-body">
+            ${items}
+            <div class="dup-alert-hint">Revise se são a mesma pessoa. Toque em um paciente para abrir e, se precisar, exclua o repetido.</div>
+          </div>
+        </div>`;
+    }
+  }
+
   const matches = db.patients.filter(p => {
     const matchesSearch = normalize(p.name).includes(normalize(term));
     const status = computeStatus(p);
@@ -533,11 +599,11 @@ function renderIndex() {
     const msg = term
       ? `Nenhum paciente encontrado para "${escHtml(searchEl.value.trim())}".`
       : `Nenhum paciente com este status.`;
-    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div>${msg}</div>`;
+    grid.innerHTML = dupBanner + `<div class="empty-state"><div class="empty-state-icon">🔍</div>${msg}</div>`;
     return;
   }
 
-  grid.innerHTML = matches.map(p => {
+  grid.innerHTML = dupBanner + matches.map(p => {
     const sessions = db.sessions[p.name] || [];
     const total = sessions.reduce((s,x) => s + (x.valor||0), 0);
     const lastDate = sessions.length ? sessions[sessions.length-1].date : null;
@@ -576,7 +642,7 @@ function openPatient(name) {
   topbarAction.classList.remove('hidden');
   topbarAction.textContent = '+ Sessão';
   document.getElementById('fPayDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('fTipo').value = 'Normal';
+  cancelEditSession(); // garante que o formulário começa em modo "novo"
   document.getElementById('fModo').value = 'Presencial no IBP';
   onTipoChange();
   onModoChange();
@@ -622,6 +688,7 @@ function renderPatientView() {
         <button class="status-toggle-btn ${p.statusOverride === 'Ausente' ? 'active-ausente' : ''}" onclick="setPatientStatus('${escAttr(p.name)}', 'Ausente')"><span class="st-dot ausente"></span>Ausente</button>
         <button class="status-toggle-btn ${p.statusOverride === 'Inativo' ? 'active-inativo' : ''}" onclick="setPatientStatus('${escAttr(p.name)}', 'Inativo')"><span class="st-dot inativo"></span>Inativo</button>
       </div>
+      <button class="btn-edit-patient" onclick="openEditPatient('${escAttr(p.name)}')">Editar dados do paciente</button>
     </div>`;
 
   document.getElementById('phInfoCard').innerHTML = infoRows.map(([label, value]) => `
@@ -664,12 +731,15 @@ function renderPatientView() {
     const fin = computeSessionFinance(s, p);
     const modo = s.attendanceMode || 'Presencial no IBP';
     const showFinance = (fin.percentIbp > 0 || fin.sublocacao > 0);
+    const numLabel = (s.sessionNumber != null) ? `<span class="session-num">Sessão ${s.sessionNumber}</span>` : '';
     return `
       <div class="session-card ${cardClass}">
         <div class="session-card-top">
+          ${numLabel}
           <div class="session-date">${formatDate(s.date)}</div>
           <span class="session-badge ${badgeClass}">${escHtml(s.tipo)}</span>
           <div class="session-value">R$ ${(s.valor||0).toFixed(2).replace('.',',')}</div>
+          <button class="session-edit" onclick="openEditSession('${escAttr(s._id)}')" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:middle"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button>
           <button class="session-delete" onclick="deleteSession('${escAttr(s._id)}')" title="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg></button>
         </div>
         <div class="session-fields">
@@ -694,7 +764,21 @@ function renderPatientView() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SALVAR / EXCLUIR SESSÃO
+//  NÚMERO DA SESSÃO — próximo número automático (conta todas as sessões)
+// ════════════════════════════════════════════════════════════════════════════
+function nextSessionNumber(name, excludeId = null) {
+  const sessions = (db.sessions[name] || []).filter(s => s._id !== excludeId);
+  let maxNum = 0;
+  sessions.forEach(s => {
+    if (s.sessionNumber != null && s.sessionNumber > maxNum) maxNum = s.sessionNumber;
+  });
+  // Se nenhuma sessão tem número ainda, usa a contagem como base
+  if (maxNum === 0) return sessions.length + 1;
+  return maxNum + 1;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SALVAR / EDITAR / EXCLUIR SESSÃO
 // ════════════════════════════════════════════════════════════════════════════
 async function saveSession() {
   const date   = document.getElementById('fDate').value;
@@ -704,6 +788,7 @@ async function saveSession() {
   const relato = document.getElementById('fRelato').value.trim();
   const conduta = document.getElementById('fConduta').value.trim();
   const link   = document.getElementById('fLink').value.trim();
+  const numRaw = document.getElementById('fSessionNumber').value;
 
   if (!date) { showToast('⚠️ Informe a data da sessão'); return; }
   const patientId = patientIdByName[currentPatient];
@@ -712,16 +797,41 @@ async function saveSession() {
   const chargeAbsence = (tipo === 'Falta') ? chargeAbsenceSelected : true;
   const attendanceMode = document.getElementById('fModo').value;
   const subleaseValue = (attendanceMode === 'Online') ? 0 : (parseFloat(document.getElementById('fSublease').value) || 0);
+  const sessionNumber = (numRaw === '' || numRaw == null) ? null : parseInt(numRaw, 10);
+
+  const payload = {
+    patient_id: patientId, user_id: currentUser.id,
+    date, tipo, valor, demanda, relato, conduta, link,
+    charge_absence: chargeAbsence, attendance_mode: attendanceMode, sublease_value: subleaseValue,
+    session_number: sessionNumber
+  };
 
   showToast('💾 Salvando…');
 
+  if (editingSessionId) {
+    // ── MODO EDIÇÃO ──
+    const { error } = await supa.from('sessions').update(payload).eq('id', editingSessionId);
+    if (error) { showToast('⚠️ Erro ao salvar edição'); console.error(error); return; }
+
+    const arr = db.sessions[currentPatient] || [];
+    const idx = arr.findIndex(s => s._id === editingSessionId);
+    if (idx > -1) {
+      arr[idx] = {
+        _id: editingSessionId, date, tipo, valor, demanda, relato, conduta, link,
+        chargeAbsence, attendanceMode, subleaseValue, sessionNumber
+      };
+    }
+    arr.sort((a,b) => a.date.localeCompare(b.date));
+    resetSessionForm();
+    showToast('✅ Sessão atualizada!');
+    renderPatientView();
+    return;
+  }
+
+  // ── MODO NOVO ──
   const { data, error } = await supa
     .from('sessions')
-    .insert({
-      patient_id: patientId, user_id: currentUser.id,
-      date, tipo, valor, demanda, relato, conduta, link,
-      charge_absence: chargeAbsence, attendance_mode: attendanceMode, sublease_value: subleaseValue
-    })
+    .insert(payload)
     .select()
     .single();
 
@@ -729,10 +839,22 @@ async function saveSession() {
 
   db.sessions[currentPatient].push({
     _id: data.id, date, tipo, valor, demanda, relato, conduta, link,
-    chargeAbsence, attendanceMode, subleaseValue
+    chargeAbsence, attendanceMode, subleaseValue, sessionNumber
   });
   db.sessions[currentPatient].sort((a,b) => a.date.localeCompare(b.date));
 
+  resetSessionForm();
+
+  const [sy, sm] = date.split('-');
+  document.getElementById('monthFilter').value = `${sy}-${sm}`;
+
+  showToast('✅ Sessão salva!');
+  renderPatientView();
+  setTimeout(() => document.getElementById('sessionList').scrollIntoView({behavior:'smooth'}), 300);
+}
+
+// Limpa o formulário de sessão e volta pro modo "novo"
+function resetSessionForm() {
   document.getElementById('fValor').value = '';
   document.getElementById('fDemanda').value = '';
   document.getElementById('fRelato').value = '';
@@ -741,15 +863,59 @@ async function saveSession() {
   document.getElementById('fTipo').value = 'Normal';
   document.getElementById('fModo').value = 'Presencial no IBP';
   document.getElementById('fSublease').value = '';
+  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+  cancelEditSession();
+  onTipoChange();
+  onModoChange();
+}
+
+// Entra em modo edição de uma sessão existente
+function openEditSession(sessionId) {
+  const arr = db.sessions[currentPatient] || [];
+  const s = arr.find(x => x._id === sessionId);
+  if (!s) { showToast('⚠️ Sessão não encontrada'); return; }
+
+  editingSessionId = sessionId;
+  document.getElementById('fDate').value = s.date;
+  document.getElementById('fTipo').value = s.tipo;
+  document.getElementById('fValor').value = s.valor || '';
+  document.getElementById('fDemanda').value = s.demanda || '';
+  document.getElementById('fRelato').value = s.relato || '';
+  document.getElementById('fConduta').value = s.conduta || '';
+  document.getElementById('fLink').value = s.link || '';
+  document.getElementById('fModo').value = s.attendanceMode || 'Presencial no IBP';
+  document.getElementById('fSublease').value = s.subleaseValue || '';
+  document.getElementById('fSessionNumber').value = (s.sessionNumber != null) ? s.sessionNumber : '';
+  setCharge(s.chargeAbsence !== false);
   onTipoChange();
   onModoChange();
 
-  const [sy, sm] = date.split('-');
-  document.getElementById('monthFilter').value = `${sy}-${sm}`;
+  // Muda o rótulo do card e do botão
+  document.getElementById('sessionFormHeader').textContent = 'Editar sessão';
+  document.getElementById('sessionSaveBtn').textContent = 'Salvar alterações';
+  document.getElementById('cancelEditRow').style.display = 'block';
 
-  showToast('✅ Sessão salva!');
-  renderPatientView();
-  setTimeout(() => document.getElementById('sessionList').scrollIntoView({behavior:'smooth'}), 300);
+  document.getElementById('fDate').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Sai do modo edição, volta pro modo "novo"
+function cancelEditSession() {
+  editingSessionId = null;
+  const hdr = document.getElementById('sessionFormHeader');
+  const btn = document.getElementById('sessionSaveBtn');
+  const row = document.getElementById('cancelEditRow');
+  const numField = document.getElementById('fSessionNumber');
+  if (hdr) hdr.textContent = 'Registrar sessão';
+  if (btn) btn.textContent = 'Salvar sessão';
+  if (row) row.style.display = 'none';
+  // Sugere o próximo número automático para uma nova sessão
+  if (numField && currentPatient) numField.value = nextSessionNumber(currentPatient);
+}
+
+// Botão "cancelar edição" chamado pela interface
+function cancelEditSessionClick() {
+  resetSessionForm();
+  showToast('Edição cancelada');
 }
 
 async function deleteSession(sessionId) {
@@ -764,9 +930,12 @@ async function deleteSession(sessionId) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ADICIONAR / EXCLUIR PACIENTE
+//  ADICIONAR / EDITAR / EXCLUIR PACIENTE
 // ════════════════════════════════════════════════════════════════════════════
 function openAddPatient() {
+  editingPatientName = null;
+  document.querySelector('#modalAdd h3').textContent = 'Novo paciente';
+  document.getElementById('btnConfirmPatient').textContent = 'Adicionar';
   document.getElementById('modalAdd').classList.add('open');
   document.getElementById('newPatientName').value = '';
   document.getElementById('newPatientBirth').value = '';
@@ -785,6 +954,23 @@ function setIbp(value) {
   document.getElementById('ibpNo').classList.toggle('active', value === false);
 }
 
+// Abre o modal em modo edição, preenchido com os dados do paciente
+function openEditPatient(name) {
+  const p = getPatientObj(name);
+  if (!p) { showToast('⚠️ Paciente não encontrado'); return; }
+  editingPatientName = name;
+  document.querySelector('#modalAdd h3').textContent = 'Editar paciente';
+  document.getElementById('btnConfirmPatient').textContent = 'Salvar alterações';
+  document.getElementById('newPatientName').value = p.name;
+  document.getElementById('newPatientBirth').value = p.birthDate || '';
+  document.getElementById('newPatientPhone').value = p.phone || '';
+  document.getElementById('newPatientEmail').value = p.email || '';
+  document.getElementById('newPatientValue').value = p.sessionValue || '';
+  document.getElementById('newPatientFreq').value = p.frequency || 'Semanal';
+  setIbp(!!p.capturedByIbp);
+  document.getElementById('modalAdd').classList.add('open');
+}
+
 async function confirmAddPatient() {
   const name = document.getElementById('newPatientName').value.trim();
   const birthDate = document.getElementById('newPatientBirth').value || null;
@@ -794,6 +980,51 @@ async function confirmAddPatient() {
   const frequency = document.getElementById('newPatientFreq').value;
 
   if (!name) { showToast('⚠️ Digite um nome'); return; }
+
+  // ── MODO EDIÇÃO ──
+  if (editingPatientName) {
+    const oldName = editingPatientName;
+    // Se mudou o nome, checa conflito com outro paciente
+    if (name !== oldName && db.patients.some(p => p.name === name)) {
+      showToast('⚠️ Já existe um paciente com esse nome'); return;
+    }
+    const patientId = patientIdByName[oldName];
+    if (!patientId) { showToast('⚠️ Paciente não encontrado'); return; }
+
+    const { error } = await supa.from('patients').update({
+      name, birth_date: birthDate, phone, email,
+      session_value: sessionValue, frequency, captured_by_ibp: ibpSelected
+    }).eq('id', patientId);
+
+    if (error) { showToast('⚠️ Erro ao salvar'); console.error(error); return; }
+
+    // Atualiza estado local
+    const p = getPatientObj(oldName);
+    if (p) {
+      p.name = name; p.birthDate = birthDate || ''; p.phone = phone; p.email = email;
+      p.sessionValue = sessionValue; p.frequency = frequency; p.capturedByIbp = ibpSelected;
+    }
+    // Se o nome mudou, precisa remapear as chaves que usam o nome
+    if (name !== oldName) {
+      db.sessions[name] = db.sessions[oldName] || [];
+      db.payments[name] = db.payments[oldName] || [];
+      delete db.sessions[oldName];
+      delete db.payments[oldName];
+      patientIdByName[name] = patientId;
+      delete patientIdByName[oldName];
+      db.appointments.forEach(a => { if (a.patientName === oldName) a.patientName = name; });
+      if (currentPatient === oldName) currentPatient = name;
+    }
+    db.patients.sort((a,b) => a.name.localeCompare(b.name));
+
+    editingPatientName = null;
+    closeAddPatient();
+    showToast('✅ Dados atualizados!');
+    if (currentPatient) { openPatient(currentPatient); } else { renderIndex(); }
+    return;
+  }
+
+  // ── MODO NOVO ──
   if (db.patients.some(p => p.name === name)) { showToast('⚠️ Paciente já existe'); return; }
 
   const { data, error } = await supa
@@ -829,7 +1060,7 @@ async function deletePatient(name) {
   const msg = qtd > 0
     ? `Excluir "${name}"?\n\nIsso apaga o paciente E as ${qtd} sessão(ões) dele(a). Esta ação é PERMANENTE.`
     : `Excluir "${name}"?\n\nEsta ação é permanente.`;
-  
+
   if (!confirm(msg)) return;
   if (qtd > 0 && !confirm(`Tem certeza? Os dados de ${qtd} sessão(ões) serão perdidos.\n\nDica: exporte o backup Excel antes.`)) return;
 
@@ -845,8 +1076,10 @@ async function deletePatient(name) {
   delete db.payments[name];
   delete patientIdByName[name];
 
+  // Se estava no prontuário desse paciente, volta pra lista
+  if (currentPatient === name) { switchTab('pacientes'); }
+  else { renderIndex(); }
   showToast(`🗑 ${name} excluído(a)`);
-  renderIndex();
 }
 
 // ── Funções de Helper Gerais ────────────────────────────────────────────────
@@ -880,9 +1113,9 @@ function calcAge(birthDate) {
 function computeStatus(p) {
   if (p.statusOverride) return p.statusOverride;
   const sessions = db.sessions[p.name] || [];
-  if (!sessions.length) return 'Ativo'; 
+  if (!sessions.length) return 'Ativo';
 
-  const lastDateStr = sessions[sessions.length - 1].date; 
+  const lastDateStr = sessions[sessions.length - 1].date;
   const lastDate = new Date(lastDateStr + 'T00:00:00');
   const today = new Date();
   const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
@@ -892,7 +1125,7 @@ function computeStatus(p) {
     case 'Semanal':   ausenteAt = 14; inativoAt = 28; break;
     case 'Quinzenal': ausenteAt = 28; inativoAt = 56; break;
     case 'Mensal':    ausenteAt = 45; inativoAt = 90; break;
-    default:          ausenteAt = 45; inativoAt = 90; break; 
+    default:          ausenteAt = 45; inativoAt = 90; break;
   }
 
   if (diffDays >= inativoAt) return 'Inativo';
@@ -931,7 +1164,7 @@ async function setPatientStatus(name, value) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  MOTOR DE PAGAMENTOS
+//  MOTOR DE PAGAMENTOS  (BUG CORRIGIDO: valor 0 nunca é "Paga")
 // ════════════════════════════════════════════════════════════════════════════
 function computePaymentStatus(name) {
   const sessions = (db.sessions[name] || []).slice().sort((a,b) => a.date.localeCompare(b.date));
@@ -940,7 +1173,7 @@ function computePaymentStatus(name) {
 
   let saldo = totalPago;
   let totalPendente = 0;
-  const statusById = {}; 
+  const statusById = {};
 
   sessions.forEach(s => {
     const cobra = (s.tipo !== 'Falta') || (s.chargeAbsence === true);
@@ -949,7 +1182,8 @@ function computePaymentStatus(name) {
       return;
     }
     const valor = s.valor || 0;
-    if (saldo >= valor) {
+    // Só marca "Paga" se há valor real (>0) E o saldo cobre. Valor 0 → sempre Pendente.
+    if (valor > 0 && saldo >= valor) {
       saldo -= valor;
       statusById[s._id] = 'Paga';
     } else {
@@ -1038,7 +1272,7 @@ function onTipoChange() {
   const tipo = document.getElementById('fTipo').value;
   const row = document.getElementById('chargeAbsenceRow');
   row.style.display = (tipo === 'Falta') ? 'flex' : 'none';
-  if (tipo === 'Falta') setCharge(true); 
+  if (tipo === 'Falta') setCharge(true);
 }
 function setCharge(value) {
   chargeAbsenceSelected = value;
@@ -1051,6 +1285,8 @@ function onModoChange() {
   row.style.display = (modo === 'Online') ? 'none' : 'flex';
   if (modo === 'Online') document.getElementById('fSublease').value = '';
 }
+
+let chargeAbsenceSelected = true;
 
 // ── Utilitários ─────────────────────────────────────────────────────────────
 function formatDate(d) {
@@ -1065,10 +1301,7 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  
-  // Feedback tátil (vibração) para o celular! 
   if (navigator.vibrate) navigator.vibrate(50);
-  
   setTimeout(() => t.classList.remove('show'), 2400);
 }
 
@@ -1134,7 +1367,7 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo por Paciente');
 
   const detRows = [[
-    'Paciente','Data','Mês','Tipo','Forma de Atendimento','Valor (R$)',
+    'Paciente','Nº Sessão','Data','Mês','Tipo','Forma de Atendimento','Valor (R$)',
     'Status Pagamento','Desconto IBP (R$)','Sublocação (R$)','Líquido (R$)',
     'Demanda','Relato','Conduta','Link'
   ]];
@@ -1150,7 +1383,7 @@ function exportExcel() {
     const fin = computeSessionFinance(s, p);
     const [y, m] = s.date.split('-');
     detRows.push([
-      p.name, formatDate(s.date), `${m}/${y}`, s.tipo,
+      p.name, (s.sessionNumber != null ? s.sessionNumber : ''), formatDate(s.date), `${m}/${y}`, s.tipo,
       s.attendanceMode || 'Presencial no IBP', round2(s.valor||0),
       stLabel, round2(fin.percentIbp), round2(fin.sublocacao), round2(fin.liquido),
       s.demanda||'', s.relato||'', s.conduta||'', s.link||''
@@ -1159,7 +1392,7 @@ function exportExcel() {
 
   const wsDet = XLSX.utils.aoa_to_sheet(detRows);
   wsDet['!cols'] = [
-    {wch:24},{wch:12},{wch:9},{wch:12},{wch:22},{wch:11},
+    {wch:24},{wch:9},{wch:12},{wch:9},{wch:12},{wch:22},{wch:11},
     {wch:15},{wch:15},{wch:15},{wch:13},
     {wch:30},{wch:30},{wch:30},{wch:28}
   ];
@@ -1172,12 +1405,15 @@ function exportExcel() {
 }
 
 // ── Listeners Finais ────────────────────────────────────────────────────────
-document.getElementById('modalAdd').addEventListener('click', e => {
+const _modalAdd = document.getElementById('modalAdd');
+if (_modalAdd) _modalAdd.addEventListener('click', e => {
   if (e.target === e.currentTarget) closeAddPatient();
 });
-document.getElementById('modalAppt').addEventListener('click', e => {
+const _modalAppt = document.getElementById('modalAppt');
+if (_modalAppt) _modalAppt.addEventListener('click', e => {
   if (e.target === e.currentTarget) closeAddAppt();
 });
-document.getElementById('newPatientName').addEventListener('keydown', e => {
+const _newPatientName = document.getElementById('newPatientName');
+if (_newPatientName) _newPatientName.addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmAddPatient();
 });
