@@ -13,21 +13,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="script.js"></script>
 
 </head>
 <body>
-
-<!-- ════════════════════════════════════════════════════════════════════════
-     CONFIGURAÇÃO DO SUPABASE
-     ════════════════════════════════════════════════════════════════════════ -->
-<script>
-  const SUPABASE_URL = 'https://fmfcylptbfxhwljhmune.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_xVYJpE_q8CL3ugACHbDcsQ_TAJSyiRN';
-
-  const AUTO_LOGIN_EMAIL = 'leticiarosaa10@hotmail.com';
-  const AUTO_LOGIN_PASSWORD = 'Lucas123*';
-</script>
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
@@ -234,13 +222,19 @@
 
     <!-- Form -->
     <div class="form-card">
-      <div class="form-card-header">Registrar sessão</div>
+      <div class="form-card-header" id="sessionFormHeader">Registrar sessão</div>
       <div class="form-body">
         <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nº da sessão</label>
+            <input type="number" class="form-input" id="fSessionNumber" placeholder="Auto" step="1" min="1">
+          </div>
           <div class="form-group">
             <label class="form-label">Data</label>
             <input type="date" class="form-input" id="fDate">
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Tipo</label>
             <select class="form-select" id="fTipo" onchange="onTipoChange()">
@@ -289,7 +283,10 @@
           <label class="form-label">Link do atendimento completo</label>
           <input type="url" class="form-input" id="fLink" placeholder="https://…">
         </div>
-        <button class="btn-save" onclick="saveSession()">Salvar sessão</button>
+        <button class="btn-save" id="sessionSaveBtn" onclick="saveSession()">Salvar sessão</button>
+        <div id="cancelEditRow" style="display:none;margin-top:8px">
+          <button class="btn-cancel-edit" onclick="cancelEditSessionClick()">Cancelar edição</button>
+        </div>
       </div>
     </div>
 
@@ -298,7 +295,7 @@
     <div class="session-list" id="sessionList"></div>
   </div>
 
-  <!-- MODAL: Add Patient -->
+  <!-- MODAL: Add/Edit Patient -->
   <div class="modal-overlay" id="modalAdd">
     <div class="modal">
       <h3>Novo paciente</h3>
@@ -344,7 +341,7 @@
       </div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeAddPatient()">Cancelar</button>
-        <button class="btn-confirm" onclick="confirmAddPatient()">Adicionar</button>
+        <button class="btn-confirm" id="btnConfirmPatient" onclick="confirmAddPatient()">Adicionar</button>
       </div>
     </div>
   </div>
@@ -402,6 +399,9 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- App carregado por último, quando todo o HTML já existe -->
+<script src="script.js"></script>
 
 </body>
 </html>
