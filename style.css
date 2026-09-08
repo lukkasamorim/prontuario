@@ -105,10 +105,7 @@ body {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   color: var(--text);
-  
-  /* Ajuste Dinâmico para Câmera do iPhone e Bateria */
   padding: calc(12px + env(safe-area-inset-top, 20px)) 20px 12px;
-  
   display: flex;
   align-items: center;
   gap: 12px;
@@ -227,7 +224,6 @@ body {
 .form-input:focus, .form-select:focus, .form-textarea:focus, .month-filter input:focus { 
   border-color: var(--teal); 
   background: var(--bg-input-focus); 
-  /* Brilho da cor Terracota em volta */
   box-shadow: 0 0 0 4px rgba(192, 112, 79, 0.15); 
 }
 .form-textarea { resize: none; line-height: 1.5; }
@@ -413,35 +409,25 @@ body {
    ════════════════════════════════════════════════════════════════════════ */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Fundo geral: Tons escuros profundos e elegantes */
     --terra-light: #1A1513;    
     --sand: #241D1A;           
     --terra-mid: #2C211D;
-    
-    /* Textos (Invertidos) */
     --text: #FBF8F4;           
     --title-color: #F3E5DE;    
     --muted: #A3968F;          
     --border: #423630;         
-    
-    /* Cores de destaque (ajustadas para brilhar suavemente no escuro) */
     --terra: #D88968;
     --terra-dark: #F3E5DE; 
     --green: #7D9D56;          
     --red: #D25A51;            
     --orange: #D09332;         
-    
-    /* Fundos dos Chips e Botões */
     --teal-light: #3D2921;
     --remark-bg: #3D3221;      
     --normal-bg: #332722;
     --bg-input-focus: #211916;
-    
-    /* Fundo escuro para cards grandes */
     --navy: #362924; 
   }
 
-  /* Efeito Vidro Escuro (Liquid Dark Glass) */
   .patient-card, .form-card, .summary-card, .info-card, .session-card, .payment-item, .fin-line, .fin-patient-card, .search-box, .month-filter, .appt-card, .agenda-view-btn, .toggle-btn, .status-toggle-btn {
     background: rgba(44, 35, 31, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -451,39 +437,67 @@ body {
     background: rgba(0,0,0,0.2);
     border-color: rgba(255,255,255,0.05);
   }
-
-  /* Janela Modal */
   .modal { background: #241D1A; border: 1px solid rgba(255,255,255,0.1); }
-  
-  /* Inputs de Texto */
   .form-input, .form-select, .form-textarea, .month-filter input {
     background: rgba(0,0,0, 0.2);
     color: var(--text);
   }
-  
-  /* Gradientes de avatar no modo escuro */
   .patient-avatar {
     box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 4px 8px rgba(0, 0, 0, 0.3);
   }
-
-  /* Correção de botões coloridos para melhor contraste no escuro */
   .appt-status-btn.st-confirmado, .chip-green, .pay-badge.paga { background: rgba(125, 157, 86, 0.15); color: var(--green); }
   .appt-status-btn.st-falta, .chip-red, .pay-badge.pendente { background: rgba(210, 90, 81, 0.15); color: var(--red); }
   .appt-status-btn.st-remarcado, .chip-yellow { background: rgba(208, 147, 50, 0.15); color: var(--orange); }
   .appt-status-btn.st-naoconfirmado, .pay-badge.naocobrada { background: rgba(255,255,255,0.05); color: var(--muted); border-color: var(--border); }
-  
-  /* Botão Cancelar Modal */
   .btn-cancel { background: rgba(255,255,255,0.05); color: var(--text); border-color: transparent; }
-
-  /* Barra Superior Translúcida Escura */
   .topbar {
     background: rgba(30, 24, 21, 0.85);
     border-color: rgba(255, 255, 255, 0.08);
   }
-
-  /* Barra Inferior Translúcida Escura */
   .bottom-nav {
     background: rgba(30, 24, 21, 0.85);
     border-color: rgba(255, 255, 255, 0.08);
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ESTILOS NOVOS (editar paciente/sessão, número da sessão, duplicados)
+   ════════════════════════════════════════════════════════════════════════ */
+.btn-edit-patient {
+  width: 100%; margin-top: 14px; padding: 12px;
+  background: transparent; border: 1.5px solid var(--terra);
+  border-radius: var(--radius-sm); color: var(--terra-dark);
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: background .15s, color .15s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.btn-edit-patient:active { background: var(--terra); color: #fff; transform: scale(0.97); }
+
+.session-edit { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; display: inline-flex; align-items: center; }
+.session-edit:active { opacity: 0.5; }
+
+.session-num { font-size: 11px; font-weight: 800; color: var(--terra-dark); background: var(--teal-light); padding: 3px 9px; border-radius: 20px; white-space: nowrap; letter-spacing: 0.2px; }
+
+.btn-cancel-edit { width: 100%; padding: 13px; background: var(--sand); border: 1.5px solid var(--border); border-radius: var(--radius-sm); color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.btn-cancel-edit:active { transform: scale(0.97); }
+
+.dup-alert {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: saturate(160%) blur(16px);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-left: 4px solid var(--orange);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(44,38,34,0.06);
+  padding: 14px 16px; margin-bottom: 16px;
+  animation: fadeInSlide 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.dup-alert-head { margin-bottom: 8px; }
+.dup-alert-title { font-size: 14px; font-weight: 800; color: var(--orange); }
+.dup-alert-body { display: flex; flex-direction: column; gap: 6px; }
+.dup-pair { font-size: 13px; font-weight: 700; color: var(--text); background: rgba(255,255,255,0.5); padding: 7px 11px; border-radius: 8px; }
+.dup-alert-hint { font-size: 12px; color: var(--muted); line-height: 1.4; margin-top: 4px; font-weight: 500; }
+
+@media (prefers-color-scheme: dark) {
+  .dup-alert { background: rgba(44, 35, 31, 0.65); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 4px solid var(--orange); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .dup-pair { background: rgba(0,0,0,0.2); }
 }
