@@ -501,3 +501,60 @@ body {
   .dup-alert { background: rgba(44, 35, 31, 0.65); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 4px solid var(--orange); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
   .dup-pair { background: rgba(0,0,0,0.2); }
 }
+/* ════════════════════════════════════════════════════════════════════════
+   ADICIONAR NO FINAL DO style.css
+   (linhas do aviso de duplicados, com botão de excluir individual)
+   ════════════════════════════════════════════════════════════════════════ */
+
+.dup-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 6px;
+}
+.dup-group:last-of-type { border-bottom: none; margin-bottom: 0; }
+
+.dup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.5);
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+.dup-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dup-row-meta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dup-row-del {
+  background: transparent;
+  border: 1.5px solid var(--red);
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.dup-row-del:active { background: var(--red); color: #fff; }
+
+@media (prefers-color-scheme: dark) {
+  .dup-row { background: rgba(0,0,0,0.2); }
+}
