@@ -65,10 +65,22 @@ async function doAutoLogin() {
   await enterApp();
 }
 
+// Esconde a splash com um fade curto em vez de sumir de uma vez
+function hideSplash() {
+  const ov = document.getElementById('loadingOverlay');
+  if (!ov) return;
+  ov.classList.add('is-hiding');
+  setTimeout(() => ov.classList.add('hidden'), 450);
+}
+
 async function enterApp() {
-  document.getElementById('loadingOverlay').classList.remove('hidden');
+  const ov = document.getElementById('loadingOverlay');
+  ov.classList.remove('hidden', 'is-hiding');
+  const inicio = Date.now();
   await loadAllData();
-  document.getElementById('loadingOverlay').classList.add('hidden');
+  // Garante que a marca fique visível pelo menos 900 ms, para não piscar
+  const espera = Math.max(0, 900 - (Date.now() - inicio));
+  setTimeout(hideSplash, espera);
   document.getElementById('appRoot').classList.remove('hidden');
 
   const now = new Date();
@@ -143,6 +155,10 @@ async function loadAllData() {
     .select('id, patient_id, date, time, status')
     .order('date', { ascending: true });
 
+  if (aErr) {
+    showToast('⚠️ Erro ao carregar a agenda');
+    console.error('Falha ao ler a tabela appointments:', aErr);
+  }
   if (!aErr && appts) {
     appts.forEach(a => {
       const name = idToName[a.patient_id];
@@ -164,6 +180,10 @@ async function loadAllData() {
     .select('id, patient_id, date, amount')
     .order('date', { ascending: true });
 
+  if (payErr) {
+    showToast('⚠️ Erro ao carregar pagamentos');
+    console.error('Falha ao ler a tabela payments:', payErr);
+  }
   if (!payErr && payments) {
     payments.forEach(pay => {
       const name = idToName[pay.patient_id];
@@ -196,86 +216,267 @@ function setActiveNav(tab) {
   });
 }
 
+let currentTab = 'dashboard';
+
 function switchTab(tab) {
   currentPatient = null;
+  currentTab = tab;
   setActiveNav(tab);
-  const topbarAction = document.getElementById('topbarAction');
-  const topbarTitle = document.getElementById('topbarTitle');
-  const topbarSub = document.getElementById('topbarSub');
+  updateFab(tab);
 
   if (tab === 'dashboard') {
     showScreen('screenDashboard');
-    topbarTitle.textContent = 'Âncora';
-    topbarSub.textContent = 'Psicologia';
-    topbarAction.classList.add('hidden');
     renderDashboard();
   } else if (tab === 'pacientes') {
     showScreen('screenIndex');
-    topbarTitle.textContent = 'Prontuário';
-    topbarSub.textContent = 'Selecione um paciente';
-    topbarAction.classList.remove('hidden');
-    topbarAction.textContent = '+ Paciente';
     renderIndex();
   } else if (tab === 'agenda') {
     showScreen('screenAgenda');
-    topbarTitle.textContent = 'Agenda';
-    topbarSub.textContent = 'Atendimentos';
-    topbarAction.classList.add('hidden');
     agendaRefDate = new Date();
-    setAgendaView('day');
+    renderAgenda();
   } else if (tab === 'financeiro') {
     showScreen('screenFinanceiro');
-    topbarTitle.textContent = 'Financeiro';
-    topbarSub.textContent = 'Resumo mensal';
-    topbarAction.classList.add('hidden');
-    const now = new Date();
-    document.getElementById('finMonthFilter').value =
-      `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const el = document.getElementById('finMonthFilter');
+    if (!el.value) {
+      const now = new Date();
+      el.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    }
     renderFinanceiro();
   } else if (tab === 'relatorios') {
     showScreen('screenRelatorios');
-    topbarTitle.textContent = 'Relatórios';
-    topbarSub.textContent = 'Backup e exportação';
-    topbarAction.classList.add('hidden');
+    renderRelatorios();
   }
+  window.scrollTo(0, 0);
+}
+
+// ── BOTÃO FLUTUANTE ─────────────────────────────────────────────────────────
+// Some nas telas em que não existe uma ação de "criar" direta.
+function updateFab(tab) {
+  const fab = document.getElementById('fab');
+  if (!fab) return;
+  const semFab = (tab === 'relatorios' || tab === 'financeiro');
+  fab.classList.toggle('hidden', semFab);
+  const rotulos = {
+    dashboard: 'Novo agendamento',
+    pacientes: 'Novo paciente',
+    agenda: 'Novo agendamento',
+    patient: 'Registrar sessão'
+  };
+  fab.setAttribute('aria-label', rotulos[tab] || 'Adicionar');
+}
+
+function fabAction() {
+  if (currentTab === 'patient') {
+    const el = document.getElementById('fDate');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); }
+    return;
+  }
+  if (currentTab === 'pacientes') { openAddPatient(); return; }
+  openAddAppt();
+}
+
+// Toca num status do painel inicial e cai na lista já filtrada
+function goToStatus(status) {
+  switchTab('pacientes');
+  setStatusFilter(status);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD E FINANCEIRO MENSAL
 // ════════════════════════════════════════════════════════════════════════════
-function renderDashboard() {
-  const ativos = db.patients.filter(p => computeStatus(p) === 'Ativo').length;
-  const ausentes = db.patients.filter(p => computeStatus(p) === 'Ausente').length;
-  const inativos = db.patients.filter(p => computeStatus(p) === 'Inativo').length;
-  document.getElementById('dashAtivos').textContent = ativos;
-  document.getElementById('dashAusentes').textContent = ausentes;
-  document.getElementById('dashInativos').textContent = inativos;
-  document.getElementById('dashTotalPacientes').textContent = db.patients.length;
+const MES_CURTO = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MES_LONGO = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-  const now = new Date();
-  const h = now.getHours();
-  const saud = h < 12 ? 'Bom dia' : (h < 18 ? 'Boa tarde' : 'Boa noite');
-  document.getElementById('dashGreeting').textContent = saud;
-  const DIAS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-  const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  document.getElementById('dashDate').textContent =
-    `${DIAS[now.getDay()]}, ${now.getDate()} de ${MES[now.getMonth()]}`;
+function fmtBRL(v) { return 'R$ ' + (v || 0).toFixed(2).replace('.', ','); }
+function iniciais(nome) {
+  return String(nome).trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
 
-  const todayStr = now.toISOString().split('T')[0];
-  const curY = now.getFullYear(), curM = now.getMonth() + 1;
-  let sessoesHoje = 0;
-  let receitaMes = 0;
+// Próximo agendamento ainda por acontecer (ignora falta e remarcado)
+function proximoAtendimento() {
+  const agora = new Date();
+  const hoje = toDateStr(agora);
+  const candidatos = (db.appointments || [])
+    .filter(a => a.status !== 'Falta' && a.status !== 'Remarcado')
+    .filter(a => {
+      if (a.date > hoje) return true;
+      if (a.date < hoje) return false;
+      const [hh, mm] = String(a.time).split(':').map(Number);
+      const quando = new Date(agora); quando.setHours(hh, mm || 0, 0, 0);
+      // ainda conta como "próximo" até 30 min depois do horário
+      return (quando.getTime() + 30 * 60000) >= agora.getTime();
+    })
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  return candidatos[0] || null;
+}
 
+// Minutos entre agora e um agendamento (negativo = já passou do horário)
+function minutosAte(appt) {
+  const [hh, mm] = String(appt.time).split(':').map(Number);
+  const quando = parseDateStr(appt.date);
+  quando.setHours(hh, mm || 0, 0, 0);
+  return Math.round((quando.getTime() - Date.now()) / 60000);
+}
+
+function textoEspera(min) {
+  if (min <= 0) return 'agora';
+  if (min < 60) return `em ${min} min`;
+  if (min < 60 * 24) {
+    const h = Math.floor(min / 60);
+    return `em ${h}h`;
+  }
+  const d = Math.round(min / (60 * 24));
+  return d === 1 ? 'amanhã' : `em ${d} dias`;
+}
+
+// Sessões registradas sem nenhum campo clínico preenchido
+function contaProntuariosPendentes() {
+  let n = 0;
   db.patients.forEach(p => {
     (db.sessions[p.name] || []).forEach(s => {
-      if (s.date === todayStr) sessoesHoje++;
-      const [sy, sm] = s.date.split('-').map(Number);
-      if (sy === curY && sm === curM) receitaMes += (s.valor || 0);
+      if (s.tipo === 'Falta') return;
+      if (!s.demanda && !s.relato && !s.conduta) n++;
     });
   });
+  return n;
+}
 
-  document.getElementById('dashSessoesHoje').textContent = sessoesHoje;
-  document.getElementById('dashReceitaMes').textContent = 'R$ ' + receitaMes.toFixed(2).replace('.', ',');
+// Agendamentos futuros ainda sem confirmação
+function contaConfirmacoesPendentes() {
+  const hoje = toDateStr(new Date());
+  return (db.appointments || []).filter(a => a.status === 'Não confirmado' && a.date >= hoje).length;
+}
+
+// Soma de tudo o que está pendente de pagamento, por paciente
+function totalEmAberto() {
+  const linhas = [];
+  let total = 0, sessoes = 0;
+  db.patients.forEach(p => {
+    const pag = computePaymentStatus(p.name);
+    if (pag.totalPendente <= 0) return;
+    const pendentes = (db.sessions[p.name] || []).filter(s => pag.statusById[s._id] === 'Pendente');
+    const desde = pendentes.length ? pendentes[0].date : null;
+    total += pag.totalPendente;
+    sessoes += pendentes.length;
+    linhas.push({ name: p.name, valor: pag.totalPendente, sessoes: pendentes.length, desde });
+  });
+  linhas.sort((a, b) => b.valor - a.valor);
+  return { total, sessoes, pacientes: linhas.length, linhas };
+}
+
+// Pagamentos recebidos dentro de um mês (opcionalmente até um dia do mês)
+function recebidoNoMes(ano, mes, ateDia) {
+  let total = 0;
+  Object.values(db.payments || {}).forEach(arr => {
+    (arr || []).forEach(pay => {
+      const [py, pm, pd] = pay.date.split('-').map(Number);
+      if (py !== ano || pm !== mes) return;
+      if (ateDia && pd > ateDia) return;
+      total += pay.amount || 0;
+    });
+  });
+  return total;
+}
+
+function renderDashboard() {
+  const agora = new Date();
+  const h = agora.getHours();
+  document.getElementById('dashGreeting').textContent =
+    h < 12 ? 'Bom dia,' : (h < 18 ? 'Boa tarde,' : 'Boa noite,');
+
+  const DIAS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  document.getElementById('dashDate').textContent =
+    `${DIAS[agora.getDay()]}, ${agora.getDate()} de ${MES_LONGO[agora.getMonth()].toLowerCase()}`;
+
+  // ── Status dos pacientes ──
+  document.getElementById('dashAtivos').textContent   = db.patients.filter(p => computeStatus(p) === 'Ativo').length;
+  document.getElementById('dashAusentes').textContent = db.patients.filter(p => computeStatus(p) === 'Ausente').length;
+  document.getElementById('dashInativos').textContent = db.patients.filter(p => computeStatus(p) === 'Inativo').length;
+  document.getElementById('dashTotalPacientes').textContent = db.patients.length;
+
+  // ── Pendências ──
+  document.getElementById('dashProntuarios').textContent = contaProntuariosPendentes();
+  document.getElementById('dashConfirmacoes').textContent = contaConfirmacoesPendentes();
+
+  // ── Dinheiro ──
+  const ano = agora.getFullYear(), mes = agora.getMonth() + 1, dia = agora.getDate();
+  const recebido = recebidoNoMes(ano, mes);
+  const mesAnt = mes === 1 ? 12 : mes - 1;
+  const anoAnt = mes === 1 ? ano - 1 : ano;
+  const recebidoAnt = recebidoNoMes(anoAnt, mesAnt, dia);
+
+  document.getElementById('dashRecebidoLabel').textContent = 'RECEBIDO - ' + MES_CURTO[mes - 1].toUpperCase();
+  document.getElementById('dashRecebido').textContent = fmtBRL(recebido);
+  document.getElementById('dashRecebidoSub').textContent =
+    recebidoAnt > 0 ? `${fmtBRL(recebidoAnt)} no mesmo dia em ${MES_CURTO[mesAnt - 1]}` : 'sem comparação com o mês anterior';
+
+  const aberto = totalEmAberto();
+  document.getElementById('dashAReceber').textContent = fmtBRL(aberto.total);
+  document.getElementById('dashAReceberSub').textContent =
+    aberto.total > 0 ? `${aberto.sessoes} ${aberto.sessoes === 1 ? 'sessão' : 'sessões'} - ${aberto.pacientes} ${aberto.pacientes === 1 ? 'paciente' : 'pacientes'}` : 'tudo em dia';
+
+  // ── Próximo atendimento ──
+  const box = document.getElementById('dashNext');
+  const nx = proximoAtendimento();
+
+  if (!nx) {
+    box.innerHTML = `
+      <div class="next-card">
+        <div class="next-label">PRÓXIMO ATENDIMENTO</div>
+        <div class="next-name" style="margin-top:10px">Nenhum agendamento</div>
+        <div class="next-meta" style="font-weight:500;color:var(--muted)">Toque no + para agendar.</div>
+      </div>`;
+    return;
+  }
+
+  const p = getPatientObj(nx.patientName);
+  const min = minutosAte(nx);
+  const hoje = toDateStr(agora);
+  const ehHoje = nx.date === hoje;
+  const partes = [];
+  if (p) {
+    partes.push(`${nextSessionNumber(p.name)}ª sessão`);
+    partes.push(p.capturedByIbp ? 'Captado pelo IBP' : 'Particular');
+    if (p.sessionValue) partes.push(fmtBRL(p.sessionValue));
+  }
+
+  box.innerHTML = `
+    <div class="next-card ${ehHoje ? 'is-now' : ''}">
+      <div class="next-label">PRÓXIMO ATENDIMENTO</div>
+      <div class="next-line">
+        <span class="next-time">${escHtml(nx.time)}</span>
+        <span class="next-in">${ehHoje ? textoEspera(min) : formatDate(nx.date)}</span>
+      </div>
+      <div class="next-name">${escHtml(nx.patientName)}</div>
+      <div class="next-meta">${escHtml(partes.join(' - '))}</div>
+      <div class="next-actions">
+        <button class="btn-primary" onclick="setApptStatus('${escAttr(nx._id)}','Confirmado')">Confirmar</button>
+        <button class="btn-ghost" onclick="setApptStatus('${escAttr(nx._id)}','Remarcado')">Remarcar</button>
+      </div>
+    </div>`;
+}
+
+// Define um status específico (o ciclo continua existindo na agenda)
+async function setApptStatus(apptId, status) {
+  const appt = (db.appointments || []).find(a => a._id === apptId);
+  if (!appt) return;
+  const { error } = await supa.from('appointments').update({ status }).eq('id', apptId);
+  if (error) { showToast('⚠️ Erro ao alterar status'); console.error(error); return; }
+  appt.status = status;
+  showToast(status === 'Confirmado' ? '✅ Atendimento confirmado' : 'Atendimento marcado como remarcado');
+  if (currentTab === 'dashboard') renderDashboard(); else renderAgenda();
+}
+
+// Setas de mês da tela financeira
+function finNavigate(dir) {
+  const el = document.getElementById('finMonthFilter');
+  let [y, m] = (el.value || '').split('-').map(Number);
+  if (!y) { const n = new Date(); y = n.getFullYear(); m = n.getMonth() + 1; }
+  m += dir;
+  if (m > 12) { m = 1; y++; }
+  if (m < 1) { m = 12; y--; }
+  el.value = `${y}-${String(m).padStart(2, '0')}`;
+  renderFinanceiro();
 }
 
 function renderFinanceiro() {
@@ -283,6 +484,9 @@ function renderFinanceiro() {
   const content = document.getElementById('finContent');
   if (!monthVal) { content.innerHTML = ''; return; }
   const [fy, fm] = monthVal.split('-').map(Number);
+
+  const lbl = document.getElementById('finMonthLabel');
+  if (lbl) lbl.textContent = `${MES_LONGO[fm - 1]} ${fy}`;
 
   let gBruto = 0, gIbp = 0, gSublease = 0, gLiquido = 0, gSessoes = 0;
   const perPatient = [];
@@ -309,8 +513,21 @@ function renderFinanceiro() {
 
   const fmt = v => 'R$ ' + v.toFixed(2).replace('.', ',');
 
+  const recebidoMes = recebidoNoMes(fy, fm);
+  const aberto = totalEmAberto();
+  const baseBarra = recebidoMes + aberto.total;
+  const pctRecebido = baseBarra > 0 ? Math.round((recebidoMes / baseBarra) * 100) : 0;
+
+  const exportRow = `
+    <button class="action-row" onclick="exportExcel()">
+      <svg style="width:20px;height:20px;color:var(--terra)"><use href="#ic-download"/></svg>
+      <span class="ar-label">Exportar planilha de ${MES_LONGO[fm - 1].toLowerCase()}</span>
+      <svg class="row-arrow"><use href="#ic-arrow"/></svg>
+    </button>`;
+
   if (!gSessoes) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💰</div>Nenhuma sessão neste mês.</div>`;
+    content.innerHTML =
+      `<div class="empty-state"><div class="empty-state-icon">💰</div>Nenhuma sessão neste mês.</div>` + exportRow;
     return;
   }
 
@@ -318,32 +535,181 @@ function renderFinanceiro() {
 
   let html = `
     <div class="fin-big-card">
-      <div class="fin-big-label">Lucro líquido do mês</div>
+      <div class="fin-big-label">LÍQUIDO DO MÊS</div>
       <div class="fin-big-value">${fmt(gLiquido)}</div>
+      <div class="fin-breakdown">
+        <div class="fin-line"><span class="fin-line-label">Bruto (${gSessoes} ${gSessoes === 1 ? 'sessão' : 'sessões'})</span><span class="fin-line-value receita">${fmt(gBruto)}</span></div>
+        ${gIbp > 0 ? `<div class="fin-line"><span class="fin-line-label">Repasse IBP</span><span class="fin-line-value desc">− ${fmt(gIbp)}</span></div>` : ''}
+        ${gSublease > 0 ? `<div class="fin-line"><span class="fin-line-label">Sublocação</span><span class="fin-line-value desc">− ${fmt(gSublease)}</span></div>` : ''}
+      </div>
     </div>
-    <div class="fin-breakdown">
-      <div class="fin-line"><span class="fin-line-label">Total bruto (${gSessoes} sessões)</span><span class="fin-line-value receita">${fmt(gBruto)}</span></div>
-      <div class="fin-line"><span class="fin-line-label">Pago ao IBP</span><span class="fin-line-value desc">− ${fmt(gIbp)}</span></div>
-      <div class="fin-line"><span class="fin-line-label">Pago em sublocações</span><span class="fin-line-value desc">− ${fmt(gSublease)}</span></div>
-      <div class="fin-line"><span class="fin-line-label">Lucro líquido</span><span class="fin-line-value lucro">${fmt(gLiquido)}</span></div>
+
+    <div class="duo-grid">
+      <div class="duo-card">
+        <div class="duo-label">RECEBIDO</div>
+        <div class="duo-value">${fmt(recebidoMes)}</div>
+        <div class="meter"><span class="m-green" style="width:${pctRecebido}%"></span></div>
+        <div class="duo-sub">${baseBarra > 0 ? pctRecebido + '% do previsto' : 'sem valores no período'}</div>
+      </div>
+      <div class="duo-card">
+        <div class="duo-label accent">A RECEBER</div>
+        <div class="duo-value">${fmt(aberto.total)}</div>
+        <div class="meter"><span class="m-terra" style="width:${100 - pctRecebido}%"></span></div>
+        <div class="duo-sub">${aberto.sessoes} ${aberto.sessoes === 1 ? 'sessão' : 'sessões'} - ${aberto.pacientes} ${aberto.pacientes === 1 ? 'paciente' : 'pacientes'}</div>
+      </div>
     </div>
-    <p class="section-label">Por paciente</p>
   `;
 
+  if (aberto.linhas.length) {
+    html += `
+      <div class="day-summary">
+        <span class="ds-main">Em aberto</span>
+        <span class="ds-meta">${aberto.pacientes} ${aberto.pacientes === 1 ? 'paciente' : 'pacientes'}</span>
+      </div>
+      <div class="list-card">
+        ${aberto.linhas.map(l => `
+          <div class="debt-row" onclick="openPatient('${escAttr(l.name)}')">
+            <div class="debt-avatar">${escHtml(iniciais(l.name))}</div>
+            <div class="debt-info">
+              <div class="debt-name">${escHtml(l.name)}</div>
+              <div class="debt-meta">${l.sessoes} ${l.sessoes === 1 ? 'sessão' : 'sessões'}${l.desde ? ' - desde ' + formatDate(l.desde) : ''}</div>
+            </div>
+            <span class="debt-value">${fmt(l.valor)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  html += `<p class="section-label">Por paciente no mês</p>`;
   html += perPatient.map(pp => `
-    <div class="fin-patient-card patient-card" style="display:block">
+    <div class="fin-patient-card">
       <div class="fin-patient-name">${escHtml(pp.name)}</div>
       <div class="fin-patient-grid">
         <div class="fin-patient-row"><span class="lbl">Sessões</span><span class="val">${pp.count}</span></div>
         <div class="fin-patient-row"><span class="lbl">Bruto</span><span class="val">${fmt(pp.bruto)}</span></div>
-        ${pp.ibp > 0 ? `<div class="fin-patient-row"><span class="lbl">IBP</span><span class="val" style="color:var(--red)">− ${fmt(pp.ibp)}</span></div>` : ''}
-        ${pp.sublease > 0 ? `<div class="fin-patient-row"><span class="lbl">Sublocação</span><span class="val" style="color:var(--red)">− ${fmt(pp.sublease)}</span></div>` : ''}
+        ${pp.ibp > 0 ? `<div class="fin-patient-row"><span class="lbl">Repasse IBP</span><span class="val" style="color:var(--yellow)">− ${fmt(pp.ibp)}</span></div>` : ''}
+        ${pp.sublease > 0 ? `<div class="fin-patient-row"><span class="lbl">Sublocação</span><span class="val" style="color:var(--yellow)">− ${fmt(pp.sublease)}</span></div>` : ''}
         <div class="fin-patient-row total"><span class="lbl">Líquido</span><span class="val">${fmt(pp.liquido)}</span></div>
       </div>
     </div>
   `).join('');
 
+  html += exportRow;
   content.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RELATÓRIOS
+// ════════════════════════════════════════════════════════════════════════════
+let relMeses = 6;
+function setRelPeriodo(n) { relMeses = n; renderRelatorios(); }
+
+function renderRelatorios() {
+  const content = document.getElementById('relContent');
+  const fmt = v => 'R$ ' + v.toFixed(2).replace('.', ',');
+  const agora = new Date();
+
+  // ── Série de faturamento líquido por mês ──
+  const serie = [];
+  for (let i = relMeses - 1; i >= 0; i--) {
+    const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+    serie.push({ ano: d.getFullYear(), mes: d.getMonth() + 1, rotulo: MES_CURTO[d.getMonth()], liquido: 0 });
+  }
+
+  let sessoesMesAtual = 0, brutoMesAtual = 0, faltasMesAtual = 0, totalMesAtual = 0;
+  let porIbp = 0, porOnline = 0;
+
+  db.patients.forEach(p => {
+    (db.sessions[p.name] || []).forEach(s => {
+      const [sy, sm] = s.date.split('-').map(Number);
+      const entra = !(s.tipo === 'Falta' && s.chargeAbsence === false);
+      const fin = computeSessionFinance(s, p);
+
+      const alvo = serie.find(x => x.ano === sy && x.mes === sm);
+      if (alvo && entra) alvo.liquido += fin.liquido;
+
+      if (sy === agora.getFullYear() && sm === agora.getMonth() + 1) {
+        totalMesAtual++;
+        if (s.tipo === 'Falta') faltasMesAtual++;
+        if (entra) { sessoesMesAtual++; brutoMesAtual += fin.bruto; }
+        const modo = s.attendanceMode || 'Presencial no IBP';
+        if (entra) { if (modo === 'Online') porOnline += fin.bruto; else porIbp += fin.bruto; }
+      }
+    });
+  });
+
+  const valores = serie.map(x => x.liquido);
+  const maxV = Math.max(...valores, 1);
+  const soma = valores.reduce((a, b) => a + b, 0);
+  const media = valores.length ? soma / valores.length : 0;
+  const alturaMedia = Math.min(100, (media / maxV) * 100);
+
+  const mediaSessao = sessoesMesAtual > 0 ? brutoMesAtual / sessoesMesAtual : 0;
+  const presenca = totalMesAtual > 0 ? Math.round(((totalMesAtual - faltasMesAtual) / totalMesAtual) * 100) : 100;
+
+  const totalModal = porIbp + porOnline;
+  const pctIbp = totalModal > 0 ? Math.round((porIbp / totalModal) * 100) : 0;
+  const pctOnline = totalModal > 0 ? 100 - pctIbp : 0;
+
+  const barras = serie.map((x, i) => {
+    const ultimo = i === serie.length - 1;
+    const alt = Math.max(2, (x.liquido / maxV) * 100);
+    return `
+      <div class="bar-col">
+        ${ultimo && x.liquido > 0 ? `<span class="bar-value">R$ ${Math.round(x.liquido)}</span>` : ''}
+        <div class="bar ${ultimo ? 'is-current' : ''}" style="height:${alt}%"></div>
+      </div>`;
+  }).join('');
+
+  const eixo = serie.map((x, i) =>
+    `<span class="${i === serie.length - 1 ? 'is-current' : ''}">${x.rotulo}</span>`
+  ).join('');
+
+  content.innerHTML = `
+    <div class="filter-tabs">
+      <button class="filter-tab ${relMeses === 6 ? 'active' : ''}" onclick="setRelPeriodo(6)">6 meses</button>
+      <button class="filter-tab ${relMeses === 12 ? 'active' : ''}" onclick="setRelPeriodo(12)">12 meses</button>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <span class="chart-title">Faturamento líquido</span>
+        <span class="chart-note">média ${fmt(media)}</span>
+      </div>
+      <div class="chart-area">
+        <div class="chart-avg" style="bottom:${alturaMedia}%"></div>
+        <div class="chart-bars">${barras}</div>
+      </div>
+      <div class="chart-axis">${eixo}</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-num">${fmt(mediaSessao)}</div>
+        <div class="kpi-lbl">média por<br>sessão</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num">${presenca}%</div>
+        <div class="kpi-lbl">taxa de<br>presença</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num">${sessoesMesAtual}</div>
+        <div class="kpi-lbl">sessões<br>no mês</div>
+      </div>
+    </div>
+
+    <div class="split-card">
+      <div class="split-title">Por modalidade no mês</div>
+      <div class="split-row"><span class="sr-label">Presencial</span><span class="sr-value">${fmt(porIbp)}</span></div>
+      <div class="split-bar"><span class="m-terra" style="width:${pctIbp}%;background:var(--terra)"></span></div>
+      <div class="split-row"><span class="sr-label">Online</span><span class="sr-value">${fmt(porOnline)}</span></div>
+      <div class="split-bar"><span style="width:${pctOnline}%;background:var(--terra-dim)"></span></div>
+    </div>
+
+    <button class="action-row" onclick="exportExcel()">
+      <svg style="width:20px;height:20px;color:var(--terra)"><use href="#ic-download"/></svg>
+      <span class="ar-label">Exportar planilha completa</span>
+      <svg class="row-arrow"><use href="#ic-arrow"/></svg>
+    </button>`;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -358,22 +724,27 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ag
 function toDateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function parseDateStr(s) { return new Date(s + 'T00:00:00'); }
 
-function setAgendaView(view) {
-  agendaView = view;
-  document.getElementById('agendaViewDay').classList.toggle('active', view === 'day');
-  document.getElementById('agendaViewWeek').classList.toggle('active', view === 'week');
-  renderAgenda();
-}
+// Mantida por compatibilidade: a tela agora é sempre "dia selecionado na semana"
+function setAgendaView(view) { agendaView = view || 'day'; renderAgenda(); }
 
+// As setas movem de semana em semana
 function agendaNavigate(dir) {
-  const step = agendaView === 'day' ? 1 : 7;
-  agendaRefDate.setDate(agendaRefDate.getDate() + dir * step);
+  agendaRefDate.setDate(agendaRefDate.getDate() + dir * 7);
   renderAgenda();
 }
 
+// Toque num dia da faixa
+function selectAgendaDay(dateStr) {
+  agendaRefDate = parseDateStr(dateStr);
+  renderAgenda();
+}
+
+// Semana começando na segunda-feira
 function startOfWeek(d) {
   const r = new Date(d);
-  r.setDate(r.getDate() - r.getDay());
+  const offset = (r.getDay() + 6) % 7;
+  r.setDate(r.getDate() - offset);
+  r.setHours(0, 0, 0, 0);
   return r;
 }
 
@@ -384,69 +755,156 @@ function statusClass(status) {
   return 'st-naoconfirmado';
 }
 
+const DOW_CURTO = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+
+// Rótulo curto de status na linha do tempo
+function statusLabel(status) {
+  if (status === 'Confirmado') return 'Confirmada';
+  if (status === 'Falta') return 'Falta';
+  if (status === 'Remarcado') return 'Remarcado';
+  return 'A confirmar';
+}
+
 function renderAgenda() {
   const label = document.getElementById('agendaNavLabel');
+  const strip = document.getElementById('agendaWeekStrip');
   const content = document.getElementById('agendaContent');
-  const todayStr = toDateStr(new Date());
+  const sumMain = document.getElementById('agendaDaySummary');
+  const sumMeta = document.getElementById('agendaDayValue');
 
-  let days = [];
-  if (agendaView === 'day') {
-    days = [new Date(agendaRefDate)];
-    const d = agendaRefDate;
-    label.textContent = `${DIAS_SEMANA[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
-  } else {
-    const start = startOfWeek(agendaRefDate);
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      days.push(d);
-    }
-    const end = days[6];
-    label.textContent = `${start.getDate()}/${start.getMonth()+1} – ${end.getDate()}/${end.getMonth()+1}`;
+  const hoje = new Date();
+  const todayStr = toDateStr(hoje);
+  const selStr = toDateStr(agendaRefDate);
+
+  // ── Faixa da semana ──
+  const start = startOfWeek(agendaRefDate);
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    dias.push(d);
   }
+  label.textContent = `${MESES[agendaRefDate.getMonth()]} ${agendaRefDate.getFullYear()}`;
 
-  let html = '';
-  let totalNoPeriodo = 0;
-
-  days.forEach(d => {
+  strip.innerHTML = dias.map((d, i) => {
     const dStr = toDateStr(d);
-    const appts = (db.appointments || [])
-      .filter(a => a.date === dStr)
-      .sort((a,b) => a.time.localeCompare(b.time));
+    const temAppt = (db.appointments || []).some(a => a.date === dStr);
+    const classes = [
+      'week-day',
+      dStr === selStr ? 'is-selected' : '',
+      dStr < todayStr ? 'is-past' : '',
+      temAppt ? 'has-appt' : ''
+    ].filter(Boolean).join(' ');
+    return `
+      <button class="${classes}" onclick="selectAgendaDay('${dStr}')">
+        <span class="wd-dow">${DOW_CURTO[i]}</span>
+        <span class="wd-num">${d.getDate()}</span>
+        <span class="wd-dot"></span>
+      </button>`;
+  }).join('');
 
-    if (agendaView === 'week' && !appts.length) return;
+  // ── Atendimentos do dia selecionado ──
+  const appts = (db.appointments || [])
+    .filter(a => a.date === selStr)
+    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
 
-    totalNoPeriodo += appts.length;
-    const isToday = dStr === todayStr;
+  // ── Sessões já registradas no prontuário neste mesmo dia ──
+  const sessoesDia = [];
+  db.patients.forEach(p => {
+    (db.sessions[p.name] || []).forEach(s => { if (s.date === selStr) sessoesDia.push({ p, s }); });
+  });
+  const temSessao = new Set(sessoesDia.map(x => x.p.name));
+  const comAgendamento = new Set(appts.map(a => a.patientName));
+  // Sessões sem agendamento correspondente aparecem como linhas próprias
+  const sessoesSoltas = sessoesDia.filter(x => !comAgendamento.has(x.p.name));
 
-    html += `<div class="agenda-day-group">
-      <div class="agenda-day-header ${isToday ? 'is-today' : ''}">
-        ${DIAS_SEMANA[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}
-        ${isToday ? '<span class="agenda-today-pill">HOJE</span>' : ''}
-      </div>`;
-
-    if (!appts.length) {
-      html += `<div class="empty-state" style="padding:20px">Nenhum atendimento neste dia.</div>`;
-    } else {
-      appts.forEach(a => {
-        const sc = statusClass(a.status);
-        html += `
-          <div class="appt-card ${sc}">
-            <div class="appt-time">${escHtml(a.time)}</div>
-            <div class="appt-info">
-              <div class="appt-name">${escHtml(a.patientName)}</div>
-              <button class="appt-status-btn ${sc}" onclick="cycleApptStatus('${escAttr(a._id)}')">${escHtml(a.status)}</button>
-            </div>
-            <button class="appt-delete" onclick="deleteAppt('${escAttr(a._id)}')" title="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg></button>
-          </div>`;
-      });
-    }
-    html += `</div>`;
+  // Valor do dia: a sessão registrada manda, o agendamento só entra se não houver sessão
+  let valorDia = 0;
+  sessoesDia.forEach(({ s }) => {
+    if (!(s.tipo === 'Falta' && s.chargeAbsence === false)) valorDia += (s.valor || 0);
+  });
+  appts.forEach(a => {
+    if (temSessao.has(a.patientName)) return;
+    if (a.status === 'Falta' || a.status === 'Remarcado') return;
+    const p = getPatientObj(a.patientName);
+    if (p) valorDia += (p.sessionValue || 0);
   });
 
-  if (agendaView === 'week' && totalNoPeriodo === 0) {
-    html = `<div class="empty-state"><div class="empty-state-icon">🗓️</div>Nenhum atendimento nesta semana.</div>`;
+  const totalItens = appts.length + sessoesSoltas.length;
+
+  sumMain.textContent = totalItens === 0
+    ? 'Nenhum atendimento'
+    : `${totalItens} ${totalItens === 1 ? 'atendimento' : 'atendimentos'}`;
+  sumMeta.textContent = valorDia > 0 ? `${fmtBRL(valorDia)} no dia` : '';
+
+  if (!totalItens) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🗓️</div>Nada neste dia.<br>Toque no + para agendar.</div>`;
+    return;
   }
+
+  const prox = proximoAtendimento();
+  const idProx = prox ? prox._id : null;
+
+  let html = appts.map(a => {
+    const p = getPatientObj(a.patientName);
+    const sc = statusClass(a.status);
+    const jaRegistrada = temSessao.has(a.patientName);
+    const ehAgora = !jaRegistrada && a._id === idProx && a.date === todayStr;
+    const jaPassou = !ehAgora && (jaRegistrada || a.date < todayStr || a.status === 'Falta' || a.status === 'Remarcado' ||
+                     (a.date === todayStr && minutosAte(a) < -30));
+
+    const partes = [];
+    if (p) {
+      partes.push(p.capturedByIbp ? 'Captado pelo IBP' : 'Particular');
+      if (p.sessionValue) partes.push(fmtBRL(p.sessionValue));
+    }
+    if (a.status === 'Falta') partes.push('falta');
+
+    return `
+      <div class="tl-row ${ehAgora ? 'is-now' : ''} ${jaPassou ? 'is-done' : ''}">
+        <div class="tl-time">${escHtml(a.time)}</div>
+        <div class="appt-card ${ehAgora ? 'is-now' : ''}">
+          <div class="appt-top">
+            <span class="appt-name">${escHtml(a.patientName)}</span>
+            ${ehAgora
+              ? `<span class="appt-now-pill">${textoEspera(minutosAte(a)).toUpperCase()}</span>`
+              : (jaRegistrada
+                  ? `<span class="appt-status-btn st-confirmado">Registrada</span>`
+                  : `<button class="appt-status-btn ${sc}" onclick="cycleApptStatus('${escAttr(a._id)}')">${statusLabel(a.status)}</button>`)}
+            <button class="appt-delete" onclick="deleteAppt('${escAttr(a._id)}')" title="Excluir agendamento">
+              <svg><use href="#ic-trash"/></svg>
+            </button>
+          </div>
+          <div class="appt-meta">${escHtml(partes.join(' · ')) || '&nbsp;'}</div>
+          ${ehAgora ? `
+          <div class="appt-actions">
+            <button class="btn-primary" onclick="setApptStatus('${escAttr(a._id)}','Confirmado')">Confirmar</button>
+            <button class="btn-ghost" onclick="setApptStatus('${escAttr(a._id)}','Remarcado')">Remarcar</button>
+          </div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Sessões registradas no prontuário que não têm agendamento no dia
+  html += sessoesSoltas.map(({ p, s }) => {
+    const partes = [];
+    if (s.sessionNumber != null) partes.push(`${s.sessionNumber}ª sessão`);
+    partes.push(s.attendanceMode || 'Presencial no IBP');
+    if (s.valor) partes.push(fmtBRL(s.valor));
+    const falta = s.tipo === 'Falta';
+    return `
+      <div class="tl-row is-done" onclick="openPatient('${escAttr(p.name)}')">
+        <div class="tl-time">—</div>
+        <div class="appt-card">
+          <div class="appt-top">
+            <span class="appt-name">${escHtml(p.name)}</span>
+            <span class="appt-status-btn ${falta ? 'st-falta' : 'st-confirmado'}">${falta ? 'Falta' : 'Registrada'}</span>
+          </div>
+          <div class="appt-meta">${escHtml(partes.join(' · '))}</div>
+        </div>
+      </div>`;
+  }).join('');
+
   content.innerHTML = html;
 }
 
@@ -603,30 +1061,27 @@ function renderIndex() {
     return;
   }
 
-  grid.innerHTML = dupBanner + matches.map(p => {
-    const sessions = db.sessions[p.name] || [];
-    const total = sessions.reduce((s,x) => s + (x.valor||0), 0);
-    const lastDate = sessions.length ? sessions[sessions.length-1].date : null;
-    const initials = p.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-    const age = calcAge(p.birthDate);
-    const status = computeStatus(p);
-    return `
-      <div class="patient-card" onclick="openPatient('${escAttr(p.name)}')">
-        <div class="patient-avatar">${initials}</div>
-        <div class="patient-info">
-          <div class="patient-name">${escHtml(p.name)}</div>
-          <div class="stat-chips">
-            <span class="chip ${statusChipClass(status)}">${statusEmoji(status)}${status}</span>
-            <span class="chip chip-teal">${sessions.length} sessão(ões)</span>
-            <span class="chip chip-green">R$ ${total.toFixed(2).replace('.',',')}</span>
-            ${age !== null ? `<span class="chip chip-teal">${age} anos</span>` : ''}
-            ${p.capturedByIbp ? `<span class="chip chip-teal">IBP</span>` : ''}
+  // Agrupa por letra inicial, como no desenho aprovado
+  const grupos = [];
+  matches.forEach(p => {
+    const letra = (normalize(p.name).trim()[0] || '#').toUpperCase();
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.letra === letra) ultimo.itens.push(p);
+    else grupos.push({ letra, itens: [p] });
+  });
+
+  grid.innerHTML = dupBanner + grupos.map(g => `
+    <div class="letter-label">${escHtml(g.letra)}</div>
+    <div class="letter-group">
+      ${g.itens.map(p => `
+        <div class="patient-card" onclick="openPatient('${escAttr(p.name)}')">
+          <div class="patient-avatar">${escHtml(iniciais(p.name))}</div>
+          <div class="patient-info">
+            <div class="patient-name">${escHtml(p.name)}</div>
           </div>
-          ${lastDate ? `<div class="patient-meta" style="margin-top:4px">Última: ${formatDate(lastDate)}</div>` : ''}
-        </div>
-        <button class="patient-delete" onclick="event.stopPropagation(); deletePatient('${escAttr(p.name)}')" title="Excluir paciente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg></button>
-      </div>`;
-  }).join('');
+          <svg class="row-arrow"><use href="#ic-arrow"/></svg>
+        </div>`).join('')}
+    </div>`).join('');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -634,13 +1089,10 @@ function renderIndex() {
 // ════════════════════════════════════════════════════════════════════════════
 function openPatient(name) {
   currentPatient = name;
+  currentTab = 'patient';
   showScreen('screenPatient');
   setActiveNav('pacientes');
-  document.getElementById('topbarTitle').textContent = name.split(' ')[0];
-  document.getElementById('topbarSub').textContent = 'Prontuário';
-  const topbarAction = document.getElementById('topbarAction');
-  topbarAction.classList.remove('hidden');
-  topbarAction.textContent = '+ Sessão';
+  updateFab('patient');
   document.getElementById('fPayDate').value = new Date().toISOString().split('T')[0];
   cancelEditSession(); // garante que o formulário começa em modo "novo"
   document.getElementById('fModo').value = 'Presencial no IBP';
@@ -689,6 +1141,7 @@ function renderPatientView() {
         <button class="status-toggle-btn ${p.statusOverride === 'Inativo' ? 'active-inativo' : ''}" onclick="setPatientStatus('${escAttr(p.name)}', 'Inativo')"><span class="st-dot inativo"></span>Inativo</button>
       </div>
       <button class="btn-edit-patient" onclick="openEditPatient('${escAttr(p.name)}')">Editar dados do paciente</button>
+      <button class="btn-edit-patient" style="border-color:var(--red);color:var(--red)" onclick="deletePatient('${escAttr(p.name)}')">Excluir paciente</button>
     </div>`;
 
   document.getElementById('phInfoCard').innerHTML = infoRows.map(([label, value]) => `
