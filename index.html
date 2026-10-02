@@ -1,43 +1,61 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<link rel="stylesheet" href="style.css">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#222222">
 <title>Âncora Psicologia</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0704F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='4.2' r='2.2'/%3E%3Cline x1='12' y1='6.4' x2='12' y2='20.5'/%3E%3Cline x1='8.5' y1='9.5' x2='15.5' y2='9.5'/%3E%3Cpath d='M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5'/%3E%3Cline x1='4.5' y1='12.5' x2='3' y2='13.4'/%3E%3Cline x1='19.5' y1='12.5' x2='21' y2='13.4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0704F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='4.2' r='2.2'/%3E%3Cline x1='12' y1='6.4' x2='12' y2='20.5'/%3E%3Cline x1='8.5' y1='9.5' x2='15.5' y2='9.5'/%3E%3Cpath d='M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 </head>
 <body>
 
-<!-- LOADING -->
+<!-- Ícones reutilizados pelas telas -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="ic-ancora" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="4" r="2.1"/><path d="M12 6.1v14.4"/><path d="M7.4 9.2h9.2"/>
+    <path d="M3.6 13.6c0 3.9 3.4 6.9 8.4 6.9s8.4-3 8.4-6.9"/>
+  </symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/><path d="M12 7.5v9M7.5 12h9"/>
+  </symbol>
+  <symbol id="ic-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12h14M13 6l6 6-6 6"/>
+  </symbol>
+  <symbol id="ic-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="ic-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></symbol>
+  <symbol id="ic-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4 18.5v1a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5v-1"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.2 9-7.2 9 7.2V20a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20z"/><path d="M9.3 21.5v-5.2a2.7 2.7 0 0 1 5.4 0v5.2"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="10" r="3"/><path d="M6.6 19.2c.9-2.4 3-3.9 5.4-3.9s4.5 1.5 5.4 3.9"/></symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="15.5" rx="2"/><path d="M3 10h18"/><path d="M7.5 3v5M16.5 3v5"/></symbol>
+  <symbol id="ic-money" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M14.4 9.5c-.5-.8-1.4-1.2-2.4-1.2-1.3 0-2.4.8-2.4 1.9s1.1 1.8 2.4 1.8 2.4.8 2.4 1.9-1.1 1.9-2.4 1.9c-1 0-1.9-.4-2.4-1.2M12 6.7v10.6"/></symbol>
+  <symbol id="ic-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5h16"/><path d="M7 20.5v-6.5M11.6 20.5V6M16.2 20.5v-9.5M20.5 20.5v-4.5"/></symbol>
+</svg>
+
+<!-- SPLASH / CARREGAMENTO -->
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="loading-text">Carregando…</div>
+  <div class="splash-mark" role="img" aria-label="Âncora Psicologia"></div>
 </div>
 
 <!-- ════ APP ════ -->
 <div id="appRoot" class="hidden">
 
-  <!-- TOP BAR -->
+  <!-- Topbar antiga: mantida oculta só para o script continuar funcionando -->
   <div class="topbar">
-    <div class="topbar-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="4.2" r="2.2"/>
-        <line x1="12" y1="6.4" x2="12" y2="20.5"/>
-        <line x1="8.5" y1="9.5" x2="15.5" y2="9.5"/>
-        <path d="M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5"/>
-        <line x1="4.5" y1="12.5" x2="3" y2="13.4"/>
-        <line x1="19.5" y1="12.5" x2="21" y2="13.4"/>
-      </svg>
-    </div>
+    <div class="topbar-logo"></div>
     <div>
       <div class="topbar-title" id="topbarTitle">Âncora</div>
       <div class="topbar-sub" id="topbarSub">Psicologia</div>
@@ -47,114 +65,162 @@
     </div>
   </div>
 
-  <!-- SCREEN: DASHBOARD -->
+  <!-- ══════════ TELA: INÍCIO ══════════ -->
   <div class="screen active" id="screenDashboard">
-
-    <!-- Saudação editorial -->
-    <div class="dash-greeting">
-      <div class="dash-greeting-eyebrow" id="dashDate">—</div>
-      <h1 class="dash-greeting-title" id="dashGreeting">Bom dia</h1>
+    <div class="brand-row">
+      <div class="brand-badge"><svg class="brand-mark"><use href="#ic-ancora"/></svg></div>
+      <div style="min-width:0">
+        <div class="greet-small" id="dashGreeting">Boa tarde,</div>
+        <div class="greet-name" id="dashUserName">Letícia Rosa</div>
+      </div>
     </div>
 
-    <!-- Herói -->
-    <div class="dash-hero">
-      <svg class="dash-hero-anchor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="4.2" r="2.2"/><line x1="12" y1="6.4" x2="12" y2="20.5"/>
-        <line x1="8.5" y1="9.5" x2="15.5" y2="9.5"/>
-        <path d="M4.5 12.5 C4.5 18, 8 20.8, 12 20.8 C16 20.8, 19.5 18, 19.5 12.5"/>
-        <line x1="4.5" y1="12.5" x2="3" y2="13.4"/><line x1="19.5" y1="12.5" x2="21" y2="13.4"/>
-      </svg>
-      <div class="dash-hero-label">Receita do mês</div>
-      <div class="dash-hero-value" id="dashReceitaMes">R$ 0</div>
-      <div class="dash-hero-meta"><span id="dashSessoesHoje">0</span> atendimentos hoje</div>
+    <!-- Data (usada pelo script; fica discreta acima do próximo atendimento) -->
+    <div class="section-label" id="dashDate" style="margin-top:0">—</div>
+
+    <!-- Próximo atendimento -->
+    <div id="dashNext"></div>
+
+    <!-- Pendências -->
+    <div class="pend-grid">
+      <button class="pend-card" onclick="switchTab('pacientes')">
+        <div class="pend-top">
+          <svg><use href="#ic-doc"/></svg>
+          <span class="pend-num" id="dashProntuarios">0</span>
+        </div>
+        <div class="pend-lbl">prontuários<br>sem preencher</div>
+      </button>
+      <button class="pend-card" onclick="switchTab('agenda')">
+        <div class="pend-top">
+          <svg><use href="#ic-clock"/></svg>
+          <span class="pend-num" id="dashConfirmacoes">0</span>
+        </div>
+        <div class="pend-lbl">confirmações<br>aguardando</div>
+      </button>
     </div>
 
-    <!-- Índice de pacientes por status -->
-    <div class="dash-index">
-      <div class="dash-index-header">
-        <span class="dash-index-title">Pacientes</span>
-        <span class="dash-index-total" id="dashTotalPacientes">0</span>
+    <!-- Recebido x a receber -->
+    <div class="duo-grid">
+      <div class="duo-card">
+        <div class="duo-label" id="dashRecebidoLabel">RECEBIDO</div>
+        <div class="duo-value" id="dashRecebido">R$ 0,00</div>
+        <div class="duo-sub" id="dashRecebidoSub">—</div>
       </div>
-      <div class="dash-index-rows">
-        <div class="dash-index-row">
-          <span class="dash-index-key"><span class="st-dot ativo"></span>Ativos</span>
-          <span class="dash-index-val" id="dashAtivos">0</span>
-        </div>
-        <div class="dash-index-row">
-          <span class="dash-index-key"><span class="st-dot ausente"></span>Ausentes</span>
-          <span class="dash-index-val" id="dashAusentes">0</span>
-        </div>
-        <div class="dash-index-row">
-          <span class="dash-index-key"><span class="st-dot inativo"></span>Inativos</span>
-          <span class="dash-index-val" id="dashInativos">0</span>
-        </div>
+      <div class="duo-card">
+        <div class="duo-label accent">A RECEBER</div>
+        <div class="duo-value" id="dashAReceber">R$ 0,00</div>
+        <div class="duo-sub" id="dashAReceberSub">—</div>
       </div>
+    </div>
+
+    <!-- Pacientes por status -->
+    <div class="list-card">
+      <div class="list-head">
+        <span class="lh-title">Pacientes</span>
+        <span class="lh-meta"><span id="dashTotalPacientes">0</span> no total</span>
+      </div>
+      <button class="list-row" onclick="goToStatus('Ativo')">
+        <span class="st-dot ativo"></span>
+        <span class="lr-label">Ativos</span>
+        <span class="lr-value" id="dashAtivos">0</span>
+        <svg class="row-arrow"><use href="#ic-arrow"/></svg>
+      </button>
+      <button class="list-row" onclick="goToStatus('Ausente')">
+        <span class="st-dot ausente"></span>
+        <span class="lr-label">Ausentes</span>
+        <span class="lr-value" id="dashAusentes">0</span>
+        <svg class="row-arrow"><use href="#ic-arrow"/></svg>
+      </button>
+      <button class="list-row" onclick="goToStatus('Inativo')">
+        <span class="st-dot inativo"></span>
+        <span class="lr-label">Inativos</span>
+        <span class="lr-value" id="dashInativos">0</span>
+        <svg class="row-arrow"><use href="#ic-arrow"/></svg>
+      </button>
     </div>
   </div>
 
-  <!-- SCREEN: INDEX -->
+  <!-- ══════════ TELA: PACIENTES ══════════ -->
   <div class="screen" id="screenIndex">
-    <p class="section-label" style="margin-top:8px">Pacientes</p>
+    <div class="scr-head">
+      <div class="scr-title">Pacientes</div>
+      <div class="scr-rule" style="width:78px"></div>
+    </div>
+
     <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="patientSearch" class="search-input" placeholder="Pesquisar paciente…" autocomplete="off" oninput="renderIndex()">
+      <svg class="search-icon"><use href="#ic-search"/></svg>
+      <input type="text" id="patientSearch" class="search-input" placeholder="Buscar por nome" autocomplete="off" oninput="renderIndex()">
       <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Limpar">✕</button>
     </div>
+
     <div class="filter-tabs" id="statusFilterTabs">
       <button class="filter-tab active" onclick="setStatusFilter('Todos')" data-filter="Todos">Todos</button>
-      <button class="filter-tab" onclick="setStatusFilter('Ativo')" data-filter="Ativo"><span class="st-dot ativo"></span>Ativos</button>
-      <button class="filter-tab" onclick="setStatusFilter('Ausente')" data-filter="Ausente"><span class="st-dot ausente"></span>Ausentes</button>
-      <button class="filter-tab" onclick="setStatusFilter('Inativo')" data-filter="Inativo"><span class="st-dot inativo"></span>Inativos</button>
+      <button class="filter-tab" onclick="setStatusFilter('Ativo')" data-filter="Ativo">Ativos</button>
+      <button class="filter-tab" onclick="setStatusFilter('Ausente')" data-filter="Ausente">Ausentes</button>
+      <button class="filter-tab" onclick="setStatusFilter('Inativo')" data-filter="Inativo">Inativos</button>
     </div>
+
     <div class="patient-grid" id="patientGrid"></div>
-    <button class="btn-add-patient" onclick="openAddPatient()">+ Adicionar paciente</button>
   </div>
 
-  <!-- SCREEN: AGENDA -->
+  <!-- ══════════ TELA: AGENDA ══════════ -->
   <div class="screen" id="screenAgenda">
-    <button class="btn-add-appt" onclick="openAddAppt()">+ Novo agendamento</button>
-    <div class="agenda-view-toggle">
-      <button class="agenda-view-btn active" id="agendaViewDay" onclick="setAgendaView('day')">Dia</button>
-      <button class="agenda-view-btn" id="agendaViewWeek" onclick="setAgendaView('week')">Semana</button>
+    <div class="scr-head">
+      <div class="scr-title">Agenda</div>
+      <div class="scr-rule" style="width:60px"></div>
     </div>
-    <div class="agenda-nav">
-      <button class="agenda-nav-btn" onclick="agendaNavigate(-1)">‹</button>
-      <div class="agenda-nav-label" id="agendaNavLabel"></div>
-      <button class="agenda-nav-btn" onclick="agendaNavigate(1)">›</button>
+
+    <div class="month-nav">
+      <button class="month-nav-btn" onclick="agendaNavigate(-1)" aria-label="Semana anterior"><svg><use href="#ic-left"/></svg></button>
+      <span class="month-nav-label" id="agendaNavLabel">—</span>
+      <button class="month-nav-btn" onclick="agendaNavigate(1)" aria-label="Próxima semana"><svg><use href="#ic-right"/></svg></button>
     </div>
+
+    <div class="week-strip" id="agendaWeekStrip"></div>
+
+    <div class="day-summary">
+      <span class="ds-main" id="agendaDaySummary">—</span>
+      <span class="ds-meta" id="agendaDayValue"></span>
+    </div>
+
     <div id="agendaContent"></div>
+
+    <!-- Botões antigos mantidos ocultos: o script ainda os referencia -->
+    <div class="hidden">
+      <button id="agendaViewDay"></button>
+      <button id="agendaViewWeek"></button>
+    </div>
   </div>
 
-  <!-- SCREEN: FINANCEIRO -->
+  <!-- ══════════ TELA: FINANCEIRO ══════════ -->
   <div class="screen" id="screenFinanceiro">
-    <div class="month-filter">
-      <label>Mês:</label>
-      <input type="month" id="finMonthFilter" onchange="renderFinanceiro()">
+    <div class="scr-head">
+      <div class="scr-title">Financeiro</div>
+      <div class="scr-rule" style="width:74px"></div>
     </div>
+
+    <div class="month-nav">
+      <button class="month-nav-btn" onclick="finNavigate(-1)" aria-label="Mês anterior"><svg><use href="#ic-left"/></svg></button>
+      <span class="month-nav-label" id="finMonthLabel">—</span>
+      <button class="month-nav-btn" onclick="finNavigate(1)" aria-label="Próximo mês"><svg><use href="#ic-right"/></svg></button>
+    </div>
+
+    <!-- Campo real do mês, mantido oculto: é a fonte do valor usada pelo script -->
+    <input type="month" id="finMonthFilter" class="hidden" onchange="renderFinanceiro()">
+
     <div id="finContent"></div>
   </div>
 
-  <!-- SCREEN: RELATÓRIOS -->
+  <!-- ══════════ TELA: RELATÓRIOS ══════════ -->
   <div class="screen" id="screenRelatorios">
-    <p class="section-label" style="margin-top:8px">Relatórios</p>
-    <div class="form-card">
-      <div class="form-card-header">Backup e exportação</div>
-      <div class="form-body">
-        <p style="font-size:13px;color:var(--muted);line-height:1.5;font-weight:500;">
-          Exporta todos os pacientes e sessões para uma planilha Excel,
-          com uma aba de índice e uma aba por paciente.
-        </p>
-        <button class="btn-export btn-export-teal" onclick="exportExcel()">Exportar backup Excel</button>
-      </div>
+    <div class="scr-head">
+      <div class="scr-title">Relatórios</div>
+      <div class="scr-rule" style="width:80px"></div>
     </div>
-    <div class="coming-soon">
-      <div class="coming-soon-icon">📊</div>
-      <h3>Mais relatórios em construção</h3>
-      <p>Resumos mensais detalhados chegam em uma<br>próxima atualização.</p>
-    </div>
+    <div id="relContent"></div>
   </div>
 
-  <!-- SCREEN: PATIENT -->
+  <!-- ══════════ TELA: PRONTUÁRIO DO PACIENTE ══════════ -->
   <div class="screen" id="screenPatient">
     <button class="back-btn" onclick="goIndex()">‹ Voltar</button>
 
@@ -166,28 +232,24 @@
       </div>
     </div>
 
-    <!-- Patient info card -->
     <div class="info-card" id="phInfoCard"></div>
 
-    <!-- Month filter -->
     <div class="month-filter">
-      <label>Mês:</label>
+      <label for="monthFilter">Mês</label>
       <input type="month" id="monthFilter" onchange="renderPatientView()">
     </div>
 
-    <!-- Month summary -->
-    <div class="month-summary" style="display:flex;gap:8px;margin-bottom:16px;">
-      <div class="summary-card patient-card" style="padding:12px 14px">
+    <div class="month-summary">
+      <div class="summary-card">
         <div class="summary-card-num" id="sumSessions">0</div>
         <div class="summary-card-lbl">Sessões no mês</div>
       </div>
-      <div class="summary-card patient-card" style="padding:12px 14px">
+      <div class="summary-card">
         <div class="summary-card-num" id="sumValue">R$ 0</div>
         <div class="summary-card-lbl">Total no mês</div>
       </div>
     </div>
 
-    <!-- Pagamentos -->
     <div class="form-card">
       <div class="form-card-header">Pagamentos</div>
       <div class="form-body">
@@ -220,7 +282,6 @@
       </div>
     </div>
 
-    <!-- Form -->
     <div class="form-card">
       <div class="form-card-header" id="sessionFormHeader">Registrar sessão</div>
       <div class="form-body">
@@ -284,18 +345,17 @@
           <input type="url" class="form-input" id="fLink" placeholder="https://…">
         </div>
         <button class="btn-save" id="sessionSaveBtn" onclick="saveSession()">Salvar sessão</button>
-        <div id="cancelEditRow" style="display:none;margin-top:8px">
+        <div id="cancelEditRow" style="display:none">
           <button class="btn-cancel-edit" onclick="cancelEditSessionClick()">Cancelar edição</button>
         </div>
       </div>
     </div>
 
-    <!-- Session list -->
     <p class="section-label">Sessões registradas</p>
     <div class="session-list" id="sessionList"></div>
   </div>
 
-  <!-- MODAL: Add/Edit Patient -->
+  <!-- MODAL: paciente -->
   <div class="modal-overlay" id="modalAdd">
     <div class="modal">
       <h3>Novo paciente</h3>
@@ -303,27 +363,23 @@
         <label class="form-label">Nome completo</label>
         <input type="text" class="form-input" id="newPatientName" placeholder="Nome do paciente" autocomplete="off">
       </div>
-      <div class="form-row" style="margin-top:12px">
-        <div class="form-group">
-          <label class="form-label">Data de nascimento</label>
-          <input type="date" class="form-input" id="newPatientBirth">
-        </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Data de nascimento</label>
+        <input type="date" class="form-input" id="newPatientBirth">
       </div>
-      <div class="form-group" style="margin-top:12px">
+      <div class="form-group" style="margin-top:14px">
         <label class="form-label">Telefone</label>
         <input type="tel" class="form-input" id="newPatientPhone" placeholder="(61) 99999-9999">
       </div>
-      <div class="form-group" style="margin-top:12px">
+      <div class="form-group" style="margin-top:14px">
         <label class="form-label">E-mail (opcional)</label>
         <input type="email" class="form-input" id="newPatientEmail" placeholder="paciente@email.com">
       </div>
-      <div class="form-row" style="margin-top:12px">
-        <div class="form-group">
-          <label class="form-label">Valor da sessão (R$)</label>
-          <input type="number" class="form-input" id="newPatientValue" placeholder="0,00" step="0.01" min="0">
-        </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Valor da sessão (R$)</label>
+        <input type="number" class="form-input" id="newPatientValue" placeholder="0,00" step="0.01" min="0">
       </div>
-      <div class="form-group" style="margin-top:12px">
+      <div class="form-group" style="margin-top:14px">
         <label class="form-label">Frequência</label>
         <select class="form-select" id="newPatientFreq">
           <option value="Semanal">Semanal</option>
@@ -332,7 +388,7 @@
           <option value="Outro">Outro</option>
         </select>
       </div>
-      <div class="form-group" style="margin-top:12px">
+      <div class="form-group" style="margin-top:14px">
         <label class="form-label">Paciente captado pelo IBP?</label>
         <div class="toggle-group">
           <button type="button" class="toggle-btn" id="ibpYes" onclick="setIbp(true)">Sim</button>
@@ -346,7 +402,7 @@
     </div>
   </div>
 
-  <!-- MODAL: Add Appointment -->
+  <!-- MODAL: agendamento -->
   <div class="modal-overlay" id="modalAppt">
     <div class="modal">
       <h3>Novo agendamento</h3>
@@ -354,7 +410,7 @@
         <label class="form-label">Paciente</label>
         <select class="form-select" id="apptPatient"></select>
       </div>
-      <div class="form-row" style="margin-top:12px">
+      <div class="form-row" style="margin-top:14px">
         <div class="form-group">
           <label class="form-label">Data</label>
           <input type="date" class="form-input" id="apptDate">
@@ -371,37 +427,24 @@
     </div>
   </div>
 
-  <!-- BOTTOM NAV -->
+  <!-- BOTÃO FLUTUANTE (muda de função conforme a aba) -->
+  <button class="fab" id="fab" onclick="fabAction()" aria-label="Adicionar">
+    <svg><use href="#ic-plus"/></svg>
+  </button>
+
+  <!-- MENU INFERIOR -->
   <div class="bottom-nav" id="bottomNav">
-    <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-6h5v6"/></svg>
-      Início
-    </button>
-    <button class="nav-item" data-tab="pacientes" onclick="switchTab('pacientes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3-5.5 7-5.5s7 2.2 7 5.5"/></svg>
-      Pacientes
-    </button>
-    <button class="nav-item" data-tab="agenda" onclick="switchTab('agenda')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
-      Agenda
-    </button>
-    <button class="nav-item" data-tab="financeiro" onclick="switchTab('financeiro')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M14.5 9.3c-.6-.8-1.6-1.1-2.7-1.1-1.5 0-2.5.8-2.5 1.9 0 2.7 5.4 1.4 5.4 4.1 0 1.2-1.1 2-2.7 2-1.2 0-2.3-.4-2.9-1.2"/></svg>
-      Financeiro
-    </button>
-    <button class="nav-item" data-tab="relatorios" onclick="switchTab('relatorios')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-      Relatórios
-    </button>
+    <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')" aria-label="Início"><svg><use href="#ic-home"/></svg></button>
+    <button class="nav-item" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><svg><use href="#ic-user"/></svg></button>
+    <button class="nav-item" data-tab="agenda" onclick="switchTab('agenda')" aria-label="Agenda"><svg><use href="#ic-cal"/></svg></button>
+    <button class="nav-item" data-tab="financeiro" onclick="switchTab('financeiro')" aria-label="Financeiro"><svg><use href="#ic-money"/></svg></button>
+    <button class="nav-item" data-tab="relatorios" onclick="switchTab('relatorios')" aria-label="Relatórios"><svg><use href="#ic-chart"/></svg></button>
   </div>
 
 </div><!-- /appRoot -->
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- App carregado por último, quando todo o HTML já existe -->
 <script src="script.js"></script>
-
 </body>
 </html>
