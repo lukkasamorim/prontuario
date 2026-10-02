@@ -1398,6 +1398,95 @@ function exportExcel() {
   ];
   XLSX.utils.book_append_sheet(wb, wsDet, 'Sessões Detalhadas');
 
+  // ── UMA ABA POR PACIENTE (para preencher o prontuário individual) ────────
+  // Nome de aba no Excel: máx. 31 caracteres, sem : \ / ? * [ ]
+  // e precisa ser único — homônimos ganham sufixo (2), (3)...
+  const usedSheetNames = new Set(['Resumo por Paciente', 'Sessões Detalhadas']);
+  function safeSheetName(rawName) {
+    let base = String(rawName).replace(/[:\\\/\?\*\[\]]/g, '').trim() || 'Paciente';
+    let name = base.slice(0, 31);
+    if (!usedSheetNames.has(name)) { usedSheetNames.add(name); return name; }
+    for (let i = 2; i < 100; i++) {
+      const suffix = ` (${i})`;
+      const candidate = base.slice(0, 31 - suffix.length) + suffix;
+      if (!usedSheetNames.has(candidate)) { usedSheetNames.add(candidate); return candidate; }
+    }
+    return base.slice(0, 28) + '...';
+  }
+
+  db.patients.forEach(p => {
+    const ss = db.sessions[p.name] || [];
+    const pag = computePaymentStatus(p.name);
+    const age = calcAge(p.birthDate);
+
+    const rows = [];
+    // Cabeçalho com os dados cadastrais do paciente
+    rows.push([p.name]);
+    rows.push(['Status', computeStatus(p)]);
+    if (age !== null) rows.push(['Idade', `${age} anos`]);
+    if (p.birthDate) rows.push(['Nascimento', formatDate(p.birthDate)]);
+    if (p.phone) rows.push(['Telefone', p.phone]);
+    if (p.email) rows.push(['E-mail', p.email]);
+    if (p.frequency) rows.push(['Frequência', p.frequency]);
+    if (p.sessionValue) rows.push(['Valor da sessão (R$)', round2(p.sessionValue)]);
+    rows.push(['Captado pelo IBP', p.capturedByIbp ? 'Sim' : 'Não']);
+    rows.push([]);
+
+    // Tabela de sessões deste paciente
+    rows.push([
+      'Nº Sessão','Data','Tipo','Forma de Atendimento','Valor (R$)','Status Pagamento',
+      'Desconto IBP (R$)','Sublocação (R$)','Líquido (R$)','Demanda','Relato','Conduta','Link'
+    ]);
+
+    let tBruto = 0, tIbp = 0, tSub = 0, tLiq = 0;
+    let tPagas = 0, tPend = 0, tFaltas = 0, tRemarc = 0;
+
+    ss.forEach(s => {
+      const st = pag.statusById[s._id] || '';
+      const stLabel = st === 'Paga' ? 'Paga' : (st === 'Pendente' ? 'Pendente' : 'Não cobrada');
+      const fin = computeSessionFinance(s, p);
+
+      if (s.tipo === 'Falta') tFaltas++;
+      if (s.tipo === 'Remarcação') tRemarc++;
+      if (st === 'Paga') tPagas++;
+      else if (st === 'Pendente') tPend++;
+
+      const entra = !(s.tipo === 'Falta' && s.chargeAbsence === false);
+      if (entra) { tBruto += fin.bruto; tIbp += fin.percentIbp; tSub += fin.sublocacao; tLiq += fin.liquido; }
+
+      rows.push([
+        (s.sessionNumber != null ? s.sessionNumber : ''),
+        formatDate(s.date), s.tipo, s.attendanceMode || 'Presencial no IBP',
+        round2(s.valor||0), stLabel,
+        round2(fin.percentIbp), round2(fin.sublocacao), round2(fin.liquido),
+        s.demanda||'', s.relato||'', s.conduta||'', s.link||''
+      ]);
+    });
+
+    if (!ss.length) rows.push(['—','Nenhuma sessão registrada ainda']);
+
+    // Totais do paciente
+    const recebido = (db.payments[p.name] || []).reduce((a,x)=>a+(x.amount||0),0);
+    rows.push([]);
+    rows.push(['TOTAL SESSÕES', ss.length]);
+    rows.push(['Pagas', tPagas]);
+    rows.push(['Pendentes', tPend]);
+    rows.push(['Faltas', tFaltas]);
+    rows.push(['Remarcações', tRemarc]);
+    rows.push(['Valor bruto (R$)', round2(tBruto)]);
+    rows.push(['Recebido (R$)', round2(recebido)]);
+    rows.push(['Pago ao IBP (R$)', round2(tIbp)]);
+    rows.push(['Sublocação (R$)', round2(tSub)]);
+    rows.push(['LUCRO LÍQUIDO (R$)', round2(tLiq)]);
+
+    const wsP = XLSX.utils.aoa_to_sheet(rows);
+    wsP['!cols'] = [
+      {wch:10},{wch:12},{wch:13},{wch:22},{wch:12},{wch:16},
+      {wch:16},{wch:16},{wch:14},{wch:34},{wch:34},{wch:34},{wch:28}
+    ];
+    XLSX.utils.book_append_sheet(wb, wsP, safeSheetName(p.name));
+  });
+
   const now = new Date();
   const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
   XLSX.writeFile(wb, `Ancora_backup_${stamp}.xlsx`);
